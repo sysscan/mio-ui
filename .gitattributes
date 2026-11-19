@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# The scripts pin this file by SHA-256; never let git rewrite its bytes.
+dist/** -text

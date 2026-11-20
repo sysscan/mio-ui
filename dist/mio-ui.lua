@@ -1239,7 +1239,9 @@ return function(section: Instance, spec, ctx)
 		end
 
 		if chevron then
-			P.tween(chevron, time, { Rotation = if value then 180 else 0 })
+			-- Swap the glyph instead of rotating it: Roblox does not draw rotation inside a clipping
+			-- ancestor, and every menu control sits in a scrolling page.
+			Icons.apply(chevron, Icons.getAsset(if value then "tabler:chevron-up" else "tabler:chevron-down"))
 			Icons.setColor(chevron, if value then theme.accentBright else theme.textFaint)
 		end
 		paintHeaderStroke()
@@ -1285,6 +1287,23 @@ local Icons = require("ui/icons.lua")
 local Common = require("ui/components/common.lua")
 local Toggle = require("ui/components/toggle.lua")
 
+-- A row that opens a set of sub-options. With a toggle it reads like any other toggle row (checkbox on
+-- the left, label beside it); on the right it shows how many options it holds and a chevron that turns
+-- down while open.
+local TOGGLE_SLOT = 24 -- puts the 12 px checkbox at x = 6, where plain toggle rows draw theirs
+local LABEL_X = 26 -- plain toggle labels start here
+local COUNT_WIDTH = 44
+
+local function CountItems(items): number
+	local count = 0
+	for _, item in items or {} do
+		if typeof(item) == "table" and item.type ~= "hint" and item.type ~= "separator" and item.type ~= "spacer" then
+			count += 1
+		end
+	end
+	return count
+end
+
 return function(section: Instance, spec, ctx)
 	local theme = ctx.theme
 	local toggleKey = spec.toggleKey or spec.key
@@ -1305,10 +1324,10 @@ return function(section: Instance, spec, ctx)
 		Parent = root,
 	})
 	P.corner(header, theme.cornerSmall)
-	local headerStroke = P.stroke(header, theme.stroke, 1, 1)
 
-	local toggleReserve = toggleKey and 48 or 0
+	local toggleReserve = toggleKey and TOGGLE_SLOT or 0
 	local expandBtn = P.create("TextButton", {
+		Position = UDim2.fromOffset(toggleReserve, 0),
 		Size = UDim2.new(1, -toggleReserve, 1, 0),
 		BackgroundTransparency = 1,
 		AutoButtonColor = false,
@@ -1316,36 +1335,51 @@ return function(section: Instance, spec, ctx)
 		Parent = header,
 	}) :: TextButton
 
-	local expandInner = P.create("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		Parent = expandBtn,
-	})
-	P.paddingXY(expandInner, 6, 0)
-	local expandLayout = P.listLayout(expandInner, 8, Enum.FillDirection.Horizontal)
-	expandLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-
-	local chevron = Icons.mount(expandInner, "tabler:chevron-right", {
-		size = 12,
-		color = theme.textFaint,
-	})
-
-	local titleLabel = P.label(expandInner, spec.label or toggleKey or "Options", {
+	local titleX = toggleKey and (LABEL_X - TOGGLE_SLOT) or 6
+	local titleLabel = P.label(expandBtn, spec.label or toggleKey or "Options", {
 		Theme = theme,
-		Size = UDim2.new(1, -20, 1, 0),
+		Position = UDim2.fromOffset(titleX, 0),
+		Size = UDim2.new(1, -(titleX + COUNT_WIDTH + 6), 1, 0),
 		TextColor3 = theme.text,
 		Font = theme.fontMedium,
 		TextSize = theme.textSize - 1,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
 
+	local meta = P.create("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -6, 0.5, 0),
+		Size = UDim2.fromOffset(COUNT_WIDTH, 14),
+		BackgroundTransparency = 1,
+		Parent = expandBtn,
+	})
+	local metaLayout = P.listLayout(meta, 6, Enum.FillDirection.Horizontal)
+	metaLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	metaLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+	local itemCount = CountItems(spec.items)
+	local countLabel = P.label(meta, tostring(itemCount), {
+		Theme = theme,
+		AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 14),
+		TextSize = theme.textSizeSmall,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		LayoutOrder = 1,
+		Visible = itemCount > 0,
+	})
+	local chevron = Icons.mount(meta, "tabler:chevron-right", {
+		size = 12,
+		color = theme.textFaint,
+	})
+	if chevron then
+		chevron.LayoutOrder = 2
+	end
+
 	local RefreshHeader;
 
 	if toggleKey then
 		local toggleSlot = P.create("Frame", {
-			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, 0, 0.5, 0),
-			Size = UDim2.fromOffset(46, theme.rowHeight),
+			Size = UDim2.new(0, TOGGLE_SLOT, 1, 0),
 			BackgroundTransparency = 1,
 			Parent = header,
 		})
@@ -1373,37 +1407,40 @@ return function(section: Instance, spec, ctx)
 		end
 	end
 
-	local body = P.create("Frame", {
+	-- Sub-options sit indented behind a guide line, so it is obvious which toggle they belong to. The
+	-- line lives beside the list, not in it: as a list item it took a whole row slot at the full height.
+	local holder = P.create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		Visible = expanded,
 		Parent = root,
 	})
-	-- Sub-options sit indented behind a guide line, so it is obvious which toggle they belong to.
+	local Guide = P.create("Frame", {
+		Position = UDim2.fromOffset(6, 2),
+		Size = UDim2.new(0, 1, 1, -4),
+		BorderSizePixel = 0,
+		BackgroundColor3 = theme.stroke,
+		Parent = holder,
+	})
+	local body = P.create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+		Parent = holder,
+	})
 	local BodyPadding = P.paddingXY(body, 0, 2)
 	BodyPadding.PaddingLeft = UDim.new(0, 12)
 	P.listLayout(body, theme.controlGap or 6)
-	local Guide = P.create("Frame", {
-		Position = UDim2.fromOffset(-6, 0),
-		Size = UDim2.new(0, 1, 1, 0),
-		BorderSizePixel = 0,
-		BackgroundColor3 = theme.stroke,
-		Parent = body,
-	})
 
 	local Hovered = false;
 	RefreshHeader = function( )
-		header.BackgroundColor3 = theme.overlay;
-		headerStroke.Color = theme.stroke;
-		headerStroke.Transparency = 1;
+		header.BackgroundColor3 = Hovered and ( theme.controlHover or theme.overlay ) or theme.overlay;
 		P.tween( header, theme.fast, { BackgroundTransparency = Hovered and 0.55 or 1 } );
-		Icons.setColor( chevron, expanded and theme.accentBright or theme.textFaint );
+		Icons.setColor( chevron, ( expanded or Hovered ) and theme.accentBright or theme.textFaint );
+		countLabel.TextColor3 = expanded and theme.textDim or theme.textFaint;
 		titleLabel.TextColor3 = ( toggleKey and ctx.config[ toggleKey ] ~= true ) and theme.textDim or theme.text;
 		Guide.BackgroundColor3 = theme.stroke;
-		if ( Hovered ) then
-			header.BackgroundColor3 = theme.controlHover or theme.overlay;
-		end
 	end
 	Common.connect( ctx, expandBtn.MouseEnter, function( )
 		Hovered = true;
@@ -1416,12 +1453,12 @@ return function(section: Instance, spec, ctx)
 
 	local function setExpanded(on: boolean, animated: boolean?)
 		expanded = on
-		RefreshHeader( );
-		body.Visible = on
+		holder.Visible = on
+		-- A glyph swap, not a rotation: rotation does not render inside the scrolling page.
 		if chevron then
-			P.tween( chevron, animated and theme.fast or 0, { Rotation = on and 0 or -90 } );
+			Icons.apply( chevron, Icons.getAsset( on and "tabler:chevron-down" or "tabler:chevron-right" ) );
 		end
-
+		RefreshHeader( );
 	end
 
 	Common.connect(ctx, expandBtn.MouseButton1Click, function()
@@ -1638,13 +1675,29 @@ return function(section: Instance, spec, ctx)
 end]];
 		["ui/components/label.lua"] = [[
 -- Text items: separators, spacers, badges, plain labels, and readouts. A readout is any label a game
--- updates live (it has an `id`) or a hint with `presentation = "status"`; it gets a monospaced panel
--- so live data reads as data, not as a control. Hint text otherwise never renders (CLAUDE.md rule 3).
+-- updates live (it has an `id`) or a hint with `presentation = "status"`. It renders as a stat row: a
+-- status dot (accent while it reports something, faint when it is empty or off), the name on the left and
+-- the value on the right when the text is "Name  Value" (two or more spaces) or "Name: Value", and "|"-separated parts as
+-- "name value · name value". Hint text otherwise never renders (CLAUDE.md rule 3).
 
 -- Dependencies
 local P = require( "ui/primitives.lua" );
 local Runtime = require( "core/runtime.lua" );
 local Common = require( "ui/components/common.lua" );
+
+-- Cache
+local StringGsub = string.gsub;
+local StringMatch = string.match;
+local StringFind = string.find;
+local StringLower = string.lower;
+local StringSplit = string.split;
+local TableConcat = table.concat;
+
+-- Constants
+local READOUT_HEIGHT = 22;
+local DOT_SIZE = 5;
+-- Readouts that start with or contain one of these report nothing live, so their dot goes faint.
+local IDLE_PATTERNS = { "^off", "^idle", "^none", "^empty", "^stopped", "^disabled", "^waiting", "not ", " off%.?$" };
 
 -- Utilities
 local function DeferSetText( Label: TextLabel, Text: string )
@@ -1662,6 +1715,65 @@ local function Holder( Section: Instance, Height: number?, Automatic: boolean? )
 		AutomaticSize = Automatic and Enum.AutomaticSize.Y or Enum.AutomaticSize.None;
 		Parent = Section;
 	} ) :: Frame;
+end
+
+local function Escape( Text: string ): string
+	local Safe = StringGsub( Text, "&", "&amp;" );
+	Safe = StringGsub( Safe, "<", "&lt;" );
+	Safe = StringGsub( Safe, ">", "&gt;" );
+	return Safe;
+end
+
+local function Trim( Text: string ): string
+	return ( StringMatch( Text, "^%s*(.-)%s*$" ) );
+end
+
+local function IsPlaceholder( Text: string ): boolean
+	return Text == "" or Text == "-" or Text == "--";
+end
+
+local function IsIdle( Text: string ): boolean
+	if ( IsPlaceholder( Text ) ) then
+		return true;
+	end
+
+	local Lower = StringLower( Text );
+
+	for _, Pattern in IDLE_PATTERNS do
+		if ( StringFind( Lower, Pattern ) ) then
+			return true;
+		end
+	end
+
+	return false;
+end
+
+-- "Rounds 3 | Trees 41" -> "<dim>Rounds</dim> 3 · <dim>Trees</dim> 41", as rich text in the theme's colours.
+local function RichValue( Text: string, Theme: any ): string
+	if ( IsPlaceholder( Text ) ) then
+		return `<font color="#{ Theme.textFaint : ToHex( ) }">—</font>`;
+	end
+
+	local Dim = Theme.textDim : ToHex( );
+	local Parts = { };
+
+	for _, Part in StringSplit( Text, "|" ) do
+		local Segment = Trim( Part );
+
+		if ( Segment ~= "" ) then
+			local Name, Value = StringMatch( Segment, "^(%a[%a%s]-)%s+([%-%+%$%d%.].*)$" );
+
+			if ( Name ) then
+				Parts[ #Parts + 1 ] = `<font color="#{ Dim }">{ Escape( Name ) }</font> { Escape( Value ) }`;
+			end
+
+			if ( not Name ) then
+				Parts[ #Parts + 1 ] = Escape( Segment );
+			end
+		end
+	end
+
+	return TableConcat( Parts, `  <font color="#{ Theme.textFaint : ToHex( ) }">·</font>  ` );
 end
 
 -- Main
@@ -1737,47 +1849,92 @@ return function( Section: Instance, Spec: any, Context: any ): any
 		return { setText = function( Value: string ) DeferSetText( Label, tostring( Value ) ); end };
 	end
 
-	local Panel = P.create( "Frame", {
-		Size = UDim2.new( 1, 0, 0, 0 );
+	-- Inset like the rows and buttons around it.
+	local RowHolder = Holder( Section, nil, true );
+	P.paddingXY( RowHolder, 6, 0 );
+	local Row = P.create( "Frame", {
+		Size = UDim2.new( 1, 0, 0, READOUT_HEIGHT );
 		AutomaticSize = Enum.AutomaticSize.Y;
 		BorderSizePixel = 0;
-		Parent = Holder( Section, nil, true );
+		Parent = RowHolder;
 	} );
-	P.corner( Panel, Theme.cornerSmall );
-	local Padding = P.paddingXY( Panel, 12, 7 );
-	Padding.PaddingLeft = UDim.new( 0, 14 );
-	-- Inset from the panel's edges so the bar never reaches its rounded corners.
-	local Accent = P.create( "Frame", {
-		Position = UDim2.fromOffset( -9, -1 );
-		Size = UDim2.new( 0, 2, 1, 2 );
+	P.corner( Row, Theme.cornerSmall );
+	local Padding = P.paddingXY( Row, 8, 4 );
+	Padding.PaddingLeft = UDim.new( 0, 8 );
+	local Layout = P.listLayout( Row, 8, Enum.FillDirection.Horizontal );
+	Layout.VerticalAlignment = Enum.VerticalAlignment.Center;
+
+	local Dot = P.create( "Frame", {
+		Size = UDim2.fromOffset( DOT_SIZE, DOT_SIZE );
 		BorderSizePixel = 0;
-		Parent = Panel;
+		LayoutOrder = 1;
+		Parent = Row;
 	} );
-	P.corner( Accent, 1 );
-	local Label = P.label( Panel, Text, {
+	P.corner( Dot, DOT_SIZE );
+
+	local NameLabel = P.label( Row, "", {
 		Theme = Theme;
-		Size = UDim2.new( 1, 0, 0, 0 );
-		AutomaticSize = Enum.AutomaticSize.Y;
-		TextWrapped = true;
+		AutomaticSize = Enum.AutomaticSize.X;
+		Size = UDim2.fromOffset( 0, READOUT_HEIGHT - 8 );
 		TextSize = Theme.textSizeSmall;
-		TextYAlignment = Enum.TextYAlignment.Top;
-		LineHeight = 1.15;
+		LayoutOrder = 2;
 	} );
 
-	if ( Theme.fontFaceMono ) then
-		Label.FontFace = Theme.fontFaceMono;
+	local ValueLabel = P.label( Row, "", {
+		Theme = Theme;
+		Size = UDim2.new( 0, 0, 0, READOUT_HEIGHT - 8 );
+		AutomaticSize = Enum.AutomaticSize.Y;
+		Font = Theme.fontMedium;
+		TextSize = Theme.textSizeSmall;
+		TextWrapped = true;
+		RichText = true;
+		LayoutOrder = 3;
+	} );
+	-- The value takes whatever width the name leaves.
+	P.create( "UIFlexItem", { FlexMode = Enum.UIFlexMode.Fill, Parent = ValueLabel } );
+
+	local Current = Text;
+
+	local function Render( )
+		local Value = Trim( Current );
+		local Name, Rest = StringMatch( Value, "^(%S[^|\n]-)%s%s+(%S.*)$" );
+		local Multiline = StringFind( Value, "\n" ) ~= nil;
+
+		-- "Active: Rage" reads the same as "Active  Rage".
+		if ( not Name ) then
+			Name, Rest = StringMatch( Value, "^(%a[^:|\n]-):%s+(%S.*)$" );
+		end
+
+		-- "Wins 0  |  Losses 0" is a list of parts, not a name and a value.
+		if ( Multiline or ( Rest and StringFind( Rest, "^|" ) ) ) then
+			Name = nil;
+			Rest = nil;
+		end
+
+		NameLabel.Visible = Name ~= nil;
+		NameLabel.Text = Name or "";
+		ValueLabel.TextXAlignment = Name and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left;
+		ValueLabel.Text = if ( Multiline ) then Escape( Value ) else RichValue( Rest or Value, Theme );
+
+		Row.BackgroundColor3 = Theme.surfaceAlt;
+		NameLabel.TextColor3 = Theme.textDim;
+		ValueLabel.TextColor3 = Theme.text;
+		Dot.BackgroundColor3 = IsIdle( Rest or Value ) and Theme.textFaint or Theme.accent;
 	end
 
-	local function Paint( )
-		Panel.BackgroundColor3 = Theme.surfaceAlt;
-		Accent.BackgroundColor3 = Theme.accent;
-		Label.TextColor3 = Theme.text;
-	end
-
-	Paint( );
-	Common.onTheme( Context, Paint );
+	Render( );
+	Common.onTheme( Context, Render );
 	return {
-		setText = function( Value: string ) DeferSetText( Label, tostring( Value ) ); end;
+		setText = function( Value: string )
+			Runtime.deferClient( function( )
+				if ( not Row.Parent ) then
+					return;
+				end
+
+				Current = tostring( Value );
+				Render( );
+			end );
+		end;
 		setHint = function( ) end;
 	};
 end]];
@@ -4674,6 +4831,7 @@ local sprites = {
 	["swords"] = {"rbxassetid://105958624998202",24,24,350,175},
 	["tabler:chevron-down"] = {"rbxassetid://110003049542328",24,24,975,900},
 	["tabler:chevron-right"] = {"rbxassetid://110003049542328",24,24,950,950},
+	["tabler:chevron-up"] = {"rbxassetid://110003049542328",24,24,950,975},
 	["tabler:search"] = {"rbxassetid://84797897423859",24,24,525,100},
 	["tabler:square"] = {"rbxassetid://84797897423859",24,24,325,675},
 	["tabler:square-check"] = {"rbxassetid://84797897423859",24,24,750,100},
@@ -7482,8 +7640,9 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 				local Changed = Body.Visible ~= Expanded;
 				Body.Visible = Expanded;
 
+				-- A glyph swap, not a rotation: rotation does not render inside the scrolling page.
 				if ( Chevron ) then
-					Chevron.Rotation = Expanded and 0 or -90;
+					Icons.apply( Chevron, Icons.getAsset( Expanded and "tabler:chevron-down" or "tabler:chevron-right" ), Owner.theme.textFaint );
 				end
 
 				if ( Owner.sectionPreferences ) then

@@ -1554,8 +1554,9 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 				local Changed = Body.Visible ~= Expanded;
 				Body.Visible = Expanded;
 
+				-- A glyph swap, not a rotation: rotation does not render inside the scrolling page.
 				if ( Chevron ) then
-					Chevron.Rotation = Expanded and 0 or -90;
+					Icons.apply( Chevron, Icons.getAsset( Expanded and "tabler:chevron-down" or "tabler:chevron-right" ), Owner.theme.textFaint );
 				end
 
 				if ( Owner.sectionPreferences ) then

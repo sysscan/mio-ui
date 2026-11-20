@@ -522,7 +522,9 @@ return function(section: Instance, spec, ctx)
 		end
 
 		if chevron then
-			P.tween(chevron, time, { Rotation = if value then 180 else 0 })
+			-- Swap the glyph instead of rotating it: Roblox does not draw rotation inside a clipping
+			-- ancestor, and every menu control sits in a scrolling page.
+			Icons.apply(chevron, Icons.getAsset(if value then "tabler:chevron-up" else "tabler:chevron-down"))
 			Icons.setColor(chevron, if value then theme.accentBright else theme.textFaint)
 		end
 		paintHeaderStroke()

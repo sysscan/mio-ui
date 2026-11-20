@@ -76,6 +76,7 @@ local sprites = {
 	["swords"] = {"rbxassetid://105958624998202",24,24,350,175},
 	["tabler:chevron-down"] = {"rbxassetid://110003049542328",24,24,975,900},
 	["tabler:chevron-right"] = {"rbxassetid://110003049542328",24,24,950,950},
+	["tabler:chevron-up"] = {"rbxassetid://110003049542328",24,24,950,975},
 	["tabler:search"] = {"rbxassetid://84797897423859",24,24,525,100},
 	["tabler:square"] = {"rbxassetid://84797897423859",24,24,325,675},
 	["tabler:square-check"] = {"rbxassetid://84797897423859",24,24,750,100},

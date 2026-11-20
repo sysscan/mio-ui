@@ -118,68 +118,95 @@ local Rotations = { [ "chevron-right" ] = -90, [ "chevron-up" ] = 180, [ "chevro
 
 local Icons = {}
 
-Icons.pageDefaults = {
-	Home = "layout-dashboard",
-	Menu = "layout-grid",
-	Visuals = "scan-eye",
-	ESP = "scan-eye",
-	Farm = "sprout",
-	Combat = "shield",
-	Aim = "focus",
-	Weapon = "circle-dot",
-	Match = "flag",
-	Fun = "sparkles",
-	Economy = "banknote",
-	Skins = "palette",
-	Player = "user",
-	Teleport = "map",
-	Teleports = "map",
-	Spectate = "telescope",
-	Troll = "ghost",
-	Crates = "package",
-	Misc = "settings",
-	Settings = "wrench",
-	Client = "wrench",
-	World = "compass",
-	Radar = "activity",
-	View = "sun-medium",
-	Audio = "volume-2",
-	Stealing = "moon",
-	Extras = "wrench",
-	Move = "rocket",
+-- Tab icons by tab name (Lucide). A tab with a known name always gets this icon, so the same tab
+-- looks the same in every game; any other tab uses the icon its game declares, then the first known
+-- word in its name. tools.ui.molto_icons bakes every value here into ui/molto.lua.
+local PAGE_ICONS = {
+	[ "main" ] = "house";
+	[ "home" ] = "house";
+	[ "start" ] = "house";
+	[ "dashboard" ] = "house";
+	[ "menu" ] = "layout-grid";
 
-	Main = "layout-dashboard",
-	Harvest = "wheat",
-	Garden = "flower-2",
-	Planting = "shovel",
-	Sell = "sprout",
-	Shop = "store",
-	Pets = "paw-print",
-	Events = "sparkles",
-	Movement = "rocket",
-	Upgrades = "wand-sparkles",
-	Tools = "map",
-}
+	[ "combat" ] = "swords";
+	[ "aim" ] = "crosshair";
+	[ "aimbot" ] = "crosshair";
+	[ "assist" ] = "magnet";
+	[ "hvh" ] = "skull";
+	[ "kill all" ] = "skull";
+	[ "anti aim" ] = "shield-half";
+	[ "weapon" ] = "sword";
+	[ "weapons" ] = "sword";
+	[ "weapon mods" ] = "wrench";
+	[ "artillery" ] = "bomb";
 
-local PageIconRefresh = {
-	[ "home" ] = "layout-dashboard",
-	[ "eye" ] = "scan-eye",
-	[ "crosshair" ] = "focus",
-	[ "swords" ] = "shield",
-	[ "target" ] = "circle-dot",
-	[ "trophy" ] = "flag",
-	[ "footprints" ] = "rocket",
-	[ "globe" ] = "compass",
-	[ "settings-2" ] = "wrench",
-	[ "sliders-horizontal" ] = "wrench",
-	[ "map-pin" ] = "map",
-	[ "coins" ] = "sprout",
+	[ "visuals" ] = "eye";
+	[ "visual" ] = "eye";
+	[ "esp" ] = "scan-eye";
+	[ "world esp" ] = "radar";
+	[ "radar" ] = "radar";
+	[ "chams" ] = "scan-face";
+	[ "hud" ] = "panels-top-left";
+	[ "overlays" ] = "layers";
+	[ "spectate" ] = "telescope";
+
+	[ "player" ] = "user";
+	[ "players" ] = "users";
+	[ "movement" ] = "footprints";
+	[ "move" ] = "footprints";
+	[ "jetpack" ] = "flame";
+	[ "vehicles" ] = "car";
+	[ "teleport" ] = "map-pin";
+	[ "teleports" ] = "map-pin";
+	[ "travel" ] = "map-pin";
+
+	[ "world" ] = "globe";
+	[ "environment" ] = "sun";
+	[ "view" ] = "sun-medium";
+	[ "facility" ] = "building-2";
+	[ "base" ] = "castle";
+	[ "build" ] = "hammer";
+	[ "building" ] = "hammer";
+	[ "tools" ] = "wrench";
+
+	[ "farm" ] = "wheat";
+	[ "farming" ] = "wheat";
+	[ "harvest" ] = "wheat";
+	[ "garden" ] = "flower-2";
+	[ "planting" ] = "shovel";
+	[ "trees" ] = "trees";
+	[ "sell" ] = "coins";
+	[ "economy" ] = "coins";
+	[ "shop" ] = "shopping-cart";
+	[ "store" ] = "shopping-cart";
+	[ "restock" ] = "package";
+	[ "crates" ] = "package";
+	[ "loot" ] = "package-open";
+	[ "items" ] = "backpack";
+	[ "rewards" ] = "gift";
+	[ "events" ] = "party-popper";
+	[ "pets" ] = "paw-print";
+	[ "upgrades" ] = "circle-arrow-up";
+	[ "stealing" ] = "hand-grab";
+	[ "match" ] = "flag";
+
+	[ "auto play" ] = "bot";
+	[ "automation" ] = "bot";
+	[ "cosmetics" ] = "palette";
+	[ "customization" ] = "palette";
+	[ "look" ] = "palette";
+	[ "skins" ] = "shirt";
+	[ "troll" ] = "ghost";
+	[ "fun" ] = "party-popper";
+	[ "audio" ] = "volume-2";
+	[ "settings" ] = "settings";
+	[ "client" ] = "settings";
+	[ "misc" ] = "layout-grid";
+	[ "extras" ] = "puzzle";
 };
 
-local normalizedPageDefaults = {}
-for label, icon in Icons.pageDefaults do
-	normalizedPageDefaults[string.lower(label)] = icon
-end
+-- Kept under its old name: games and the bundler read Icons.pageDefaults.
+Icons.pageDefaults = PAGE_ICONS;
 
 export type MountOpts = {
 	size: number?,
@@ -191,18 +218,43 @@ export type MountOpts = {
 	zIndex: number?,
 }
 
-local function resolvePageIcon(label: string?, explicit: string?): string?
-	if typeof(explicit) == "string" and explicit ~= "" then
-		local Resolved = PageIconRefresh[ explicit ] or explicit;
-		if ( Icons.getAsset( Resolved ) ) then
-			return Resolved;
+local function NormalizeLabel( Label: string ): string
+	local Lower = string.lower( Label );
+	Lower = string.gsub( Lower, "[%-_]", " " );
+	Lower = string.gsub( Lower, "%s+", " " );
+	return ( string.match( Lower, "^%s*(.-)%s*$" ) );
+end
+
+local function resolvePageIcon( Label: string?, Explicit: string? ): string?
+	local HasExplicit = typeof( Explicit ) == "string" and Explicit ~= "";
+
+	-- A provider-prefixed icon ("heroicons:...") is a deliberate choice, as on the hub's own pages.
+	if ( HasExplicit and string.find( Explicit :: string, ":" ) and Icons.getAsset( Explicit :: string ) ) then
+		return Explicit;
+	end
+
+	local Key = if ( typeof( Label ) == "string" ) then NormalizeLabel( Label ) else nil;
+	local Known = Key and PAGE_ICONS[ Key ];
+
+	if ( Known ) then
+		return Known;
+	end
+
+	if ( HasExplicit and Icons.getAsset( Explicit :: string ) ) then
+		return Explicit;
+	end
+
+	if ( not Key ) then
+		return nil;
+	end
+
+	for Word in string.gmatch( Key, "%S+" ) do
+		if ( PAGE_ICONS[ Word ] ) then
+			return PAGE_ICONS[ Word ];
 		end
 	end
-	if typeof(label) == "string" then
-		local normalized = label:lower():gsub("^%s+", ""):gsub("%s+$", "")
-		return Icons.pageDefaults[label] or normalizedPageDefaults[normalized]
-	end
-	return nil
+
+	return nil;
 end
 
 function Icons.resolvePageIcon(label: string?, explicit: string?): string?

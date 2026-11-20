@@ -3234,68 +3234,95 @@ local Rotations = { [ "chevron-right" ] = -90, [ "chevron-up" ] = 180, [ "chevro
 
 local Icons = {}
 
-Icons.pageDefaults = {
-	Home = "layout-dashboard",
-	Menu = "layout-grid",
-	Visuals = "scan-eye",
-	ESP = "scan-eye",
-	Farm = "sprout",
-	Combat = "shield",
-	Aim = "focus",
-	Weapon = "circle-dot",
-	Match = "flag",
-	Fun = "sparkles",
-	Economy = "banknote",
-	Skins = "palette",
-	Player = "user",
-	Teleport = "map",
-	Teleports = "map",
-	Spectate = "telescope",
-	Troll = "ghost",
-	Crates = "package",
-	Misc = "settings",
-	Settings = "wrench",
-	Client = "wrench",
-	World = "compass",
-	Radar = "activity",
-	View = "sun-medium",
-	Audio = "volume-2",
-	Stealing = "moon",
-	Extras = "wrench",
-	Move = "rocket",
+-- Tab icons by tab name (Lucide). A tab with a known name always gets this icon, so the same tab
+-- looks the same in every game; any other tab uses the icon its game declares, then the first known
+-- word in its name. tools.ui.molto_icons bakes every value here into ui/molto.lua.
+local PAGE_ICONS = {
+	[ "main" ] = "house";
+	[ "home" ] = "house";
+	[ "start" ] = "house";
+	[ "dashboard" ] = "house";
+	[ "menu" ] = "layout-grid";
 
-	Main = "layout-dashboard",
-	Harvest = "wheat",
-	Garden = "flower-2",
-	Planting = "shovel",
-	Sell = "sprout",
-	Shop = "store",
-	Pets = "paw-print",
-	Events = "sparkles",
-	Movement = "rocket",
-	Upgrades = "wand-sparkles",
-	Tools = "map",
-}
+	[ "combat" ] = "swords";
+	[ "aim" ] = "crosshair";
+	[ "aimbot" ] = "crosshair";
+	[ "assist" ] = "magnet";
+	[ "hvh" ] = "skull";
+	[ "kill all" ] = "skull";
+	[ "anti aim" ] = "shield-half";
+	[ "weapon" ] = "sword";
+	[ "weapons" ] = "sword";
+	[ "weapon mods" ] = "wrench";
+	[ "artillery" ] = "bomb";
 
-local PageIconRefresh = {
-	[ "home" ] = "layout-dashboard",
-	[ "eye" ] = "scan-eye",
-	[ "crosshair" ] = "focus",
-	[ "swords" ] = "shield",
-	[ "target" ] = "circle-dot",
-	[ "trophy" ] = "flag",
-	[ "footprints" ] = "rocket",
-	[ "globe" ] = "compass",
-	[ "settings-2" ] = "wrench",
-	[ "sliders-horizontal" ] = "wrench",
-	[ "map-pin" ] = "map",
-	[ "coins" ] = "sprout",
+	[ "visuals" ] = "eye";
+	[ "visual" ] = "eye";
+	[ "esp" ] = "scan-eye";
+	[ "world esp" ] = "radar";
+	[ "radar" ] = "radar";
+	[ "chams" ] = "scan-face";
+	[ "hud" ] = "panels-top-left";
+	[ "overlays" ] = "layers";
+	[ "spectate" ] = "telescope";
+
+	[ "player" ] = "user";
+	[ "players" ] = "users";
+	[ "movement" ] = "footprints";
+	[ "move" ] = "footprints";
+	[ "jetpack" ] = "flame";
+	[ "vehicles" ] = "car";
+	[ "teleport" ] = "map-pin";
+	[ "teleports" ] = "map-pin";
+	[ "travel" ] = "map-pin";
+
+	[ "world" ] = "globe";
+	[ "environment" ] = "sun";
+	[ "view" ] = "sun-medium";
+	[ "facility" ] = "building-2";
+	[ "base" ] = "castle";
+	[ "build" ] = "hammer";
+	[ "building" ] = "hammer";
+	[ "tools" ] = "wrench";
+
+	[ "farm" ] = "wheat";
+	[ "farming" ] = "wheat";
+	[ "harvest" ] = "wheat";
+	[ "garden" ] = "flower-2";
+	[ "planting" ] = "shovel";
+	[ "trees" ] = "trees";
+	[ "sell" ] = "coins";
+	[ "economy" ] = "coins";
+	[ "shop" ] = "shopping-cart";
+	[ "store" ] = "shopping-cart";
+	[ "restock" ] = "package";
+	[ "crates" ] = "package";
+	[ "loot" ] = "package-open";
+	[ "items" ] = "backpack";
+	[ "rewards" ] = "gift";
+	[ "events" ] = "party-popper";
+	[ "pets" ] = "paw-print";
+	[ "upgrades" ] = "circle-arrow-up";
+	[ "stealing" ] = "hand-grab";
+	[ "match" ] = "flag";
+
+	[ "auto play" ] = "bot";
+	[ "automation" ] = "bot";
+	[ "cosmetics" ] = "palette";
+	[ "customization" ] = "palette";
+	[ "look" ] = "palette";
+	[ "skins" ] = "shirt";
+	[ "troll" ] = "ghost";
+	[ "fun" ] = "party-popper";
+	[ "audio" ] = "volume-2";
+	[ "settings" ] = "settings";
+	[ "client" ] = "settings";
+	[ "misc" ] = "layout-grid";
+	[ "extras" ] = "puzzle";
 };
 
-local normalizedPageDefaults = {}
-for label, icon in Icons.pageDefaults do
-	normalizedPageDefaults[string.lower(label)] = icon
-end
+-- Kept under its old name: games and the bundler read Icons.pageDefaults.
+Icons.pageDefaults = PAGE_ICONS;
 
 export type MountOpts = {
 	size: number?,
@@ -3307,18 +3334,43 @@ export type MountOpts = {
 	zIndex: number?,
 }
 
-local function resolvePageIcon(label: string?, explicit: string?): string?
-	if typeof(explicit) == "string" and explicit ~= "" then
-		local Resolved = PageIconRefresh[ explicit ] or explicit;
-		if ( Icons.getAsset( Resolved ) ) then
-			return Resolved;
+local function NormalizeLabel( Label: string ): string
+	local Lower = string.lower( Label );
+	Lower = string.gsub( Lower, "[%-_]", " " );
+	Lower = string.gsub( Lower, "%s+", " " );
+	return ( string.match( Lower, "^%s*(.-)%s*$" ) );
+end
+
+local function resolvePageIcon( Label: string?, Explicit: string? ): string?
+	local HasExplicit = typeof( Explicit ) == "string" and Explicit ~= "";
+
+	-- A provider-prefixed icon ("heroicons:...") is a deliberate choice, as on the hub's own pages.
+	if ( HasExplicit and string.find( Explicit :: string, ":" ) and Icons.getAsset( Explicit :: string ) ) then
+		return Explicit;
+	end
+
+	local Key = if ( typeof( Label ) == "string" ) then NormalizeLabel( Label ) else nil;
+	local Known = Key and PAGE_ICONS[ Key ];
+
+	if ( Known ) then
+		return Known;
+	end
+
+	if ( HasExplicit and Icons.getAsset( Explicit :: string ) ) then
+		return Explicit;
+	end
+
+	if ( not Key ) then
+		return nil;
+	end
+
+	for Word in string.gmatch( Key, "%S+" ) do
+		if ( PAGE_ICONS[ Word ] ) then
+			return PAGE_ICONS[ Word ];
 		end
 	end
-	if typeof(label) == "string" then
-		local normalized = label:lower():gsub("^%s+", ""):gsub("%s+$", "")
-		return Icons.pageDefaults[label] or normalizedPageDefaults[normalized]
-	end
-	return nil
+
+	return nil;
 end
 
 function Icons.resolvePageIcon(label: string?, explicit: string?): string?
@@ -4764,11 +4816,16 @@ local sprites = {
 	["arrow-left"] = {"rbxassetid://118199753695009",24,24,100,200},
 	["arrow-right"] = {"rbxassetid://118199753695009",24,24,0,300},
 	["arrow-up"] = {"rbxassetid://118199753695009",24,24,25,300},
+	["backpack"] = {"rbxassetid://118199753695009",24,24,0,350},
 	["banknote"] = {"rbxassetid://118199753695009",24,24,50,350},
 	["bomb"] = {"rbxassetid://118199753695009",24,24,50,425},
+	["book-open"] = {"rbxassetid://118199753695009",24,24,75,425},
 	["bot"] = {"rbxassetid://118199753695009",24,24,150,375},
 	["box"] = {"rbxassetid://118199753695009",24,24,75,450},
+	["building-2"] = {"rbxassetid://118199753695009",24,24,525,50},
+	["car"] = {"rbxassetid://118199753695009",24,24,550,75},
 	["cart"] = {"rbxassetid://105958624998202",24,24,25,100},
+	["castle"] = {"rbxassetid://118199753695009",24,24,275,350},
 	["check"] = {"rbxassetid://118199753695009",24,24,125,525},
 	["check-square-2"] = {"rbxassetid://105958624998202",24,24,150,175},
 	["chevron-down"] = {"rbxassetid://118199753695009",24,24,600,75},
@@ -4776,50 +4833,69 @@ local sprites = {
 	["chevron-right"] = {"rbxassetid://118199753695009",24,24,500,175},
 	["chevron-up"] = {"rbxassetid://118199753695009",24,24,475,200},
 	["circle"] = {"rbxassetid://118199753695009",24,24,400,350},
+	["circle-arrow-up"] = {"rbxassetid://118199753695009",24,24,625,75},
 	["circle-dot"] = {"rbxassetid://118199753695009",24,24,225,475},
 	["circle-x"] = {"rbxassetid://118199753695009",24,24,425,325},
 	["coins"] = {"rbxassetid://118199753695009",24,24,275,525},
 	["compass"] = {"rbxassetid://118199753695009",24,24,100,700},
 	["crosshair"] = {"rbxassetid://118199753695009",24,24,825,25},
 	["crown"] = {"rbxassetid://118199753695009",24,24,800,50},
+	["door-open"] = {"rbxassetid://118199753695009",24,24,425,450},
 	["eye"] = {"rbxassetid://118199753695009",24,24,200,700},
 	["flag"] = {"rbxassetid://118199753695009",24,24,525,450},
+	["flame"] = {"rbxassetid://118199753695009",24,24,475,500},
 	["flower-2"] = {"rbxassetid://118199753695009",24,24,275,700},
 	["focus"] = {"rbxassetid://118199753695009",24,24,225,750},
 	["footprints"] = {"rbxassetid://118199753695009",24,24,300,700},
 	["ghost"] = {"rbxassetid://118199753695009",24,24,550,475},
+	["gift"] = {"rbxassetid://118199753695009",24,24,525,500},
 	["globe"] = {"rbxassetid://118199753695009",24,24,800,250},
 	["gun"] = {"rbxassetid://118199753695009",24,24,825,25},
+	["hammer"] = {"rbxassetid://118199753695009",24,24,225,825},
+	["hand-grab"] = {"rbxassetid://118199753695009",24,24,150,900},
 	["heart-crack"] = {"rbxassetid://118199753695009",24,24,375,700},
 	["heroicons:cog-6-tooth"] = {"rbxassetid://124406433853800",24,24,100,675},
 	["heroicons:sparkles"] = {"rbxassetid://124406433853800",24,24,975,250},
 	["home"] = {"rbxassetid://118199753695009",24,24,625,475},
+	["house"] = {"rbxassetid://118199753695009",24,24,625,475},
 	["info"] = {"rbxassetid://118199753695009",24,24,975,150},
 	["key"] = {"rbxassetid://118199753695009",24,24,625,500},
 	["keyboard"] = {"rbxassetid://118199753695009",24,24,550,575},
+	["layers"] = {"rbxassetid://118199753695009",24,24,750,400},
 	["layout-dashboard"] = {"rbxassetid://118199753695009",24,24,675,475},
 	["layout-grid"] = {"rbxassetid://118199753695009",24,24,600,550},
 	["lock"] = {"rbxassetid://118199753695009",24,24,700,525},
 	["log-in"] = {"rbxassetid://118199753695009",24,24,675,550},
 	["log-out"] = {"rbxassetid://118199753695009",24,24,650,575},
+	["magnet"] = {"rbxassetid://118199753695009",24,24,550,675},
 	["map"] = {"rbxassetid://118199753695009",24,24,500,750},
 	["map-pin"] = {"rbxassetid://118199753695009",24,24,575,675},
 	["moon"] = {"rbxassetid://118199753695009",24,24,400,925},
+	["move"] = {"rbxassetid://118199753695009",24,24,900,475},
 	["package"] = {"rbxassetid://118199753695009",24,24,525,875},
+	["package-open"] = {"rbxassetid://118199753695009",24,24,625,775},
 	["paintbrush"] = {"rbxassetid://118199753695009",24,24,425,975},
 	["palette"] = {"rbxassetid://118199753695009",24,24,975,450},
+	["panels-top-left"] = {"rbxassetid://118199753695009",24,24,975,475},
+	["party-popper"] = {"rbxassetid://118199753695009",24,24,800,650},
 	["paw-print"] = {"rbxassetid://118199753695009",24,24,750,700},
 	["plus"] = {"rbxassetid://118199753695009",24,24,925,600},
+	["puzzle"] = {"rbxassetid://118199753695009",24,24,900,650},
+	["radar"] = {"rbxassetid://118199753695009",24,24,775,775},
 	["refresh-cw"] = {"rbxassetid://118199753695009",24,24,750,850},
 	["rocket"] = {"rbxassetid://118199753695009",24,24,700,925},
 	["scan-eye"] = {"rbxassetid://118199753695009",24,24,925,800},
+	["scan-face"] = {"rbxassetid://118199753695009",24,24,900,825},
 	["search"] = {"rbxassetid://118199753695009",24,24,950,850},
 	["send"] = {"rbxassetid://118199753695009",24,24,850,950},
 	["settings"] = {"rbxassetid://118199753695009",24,24,925,925},
 	["settings-2"] = {"rbxassetid://118199753695009",24,24,950,900},
 	["shield"] = {"rbxassetid://105958624998202",24,24,100,0},
+	["shield-half"] = {"rbxassetid://105958624998202",24,24,0,0},
+	["shirt"] = {"rbxassetid://105958624998202",24,24,0,100},
 	["shopping-cart"] = {"rbxassetid://105958624998202",24,24,25,100},
 	["shovel"] = {"rbxassetid://105958624998202",24,24,0,125},
+	["skull"] = {"rbxassetid://105958624998202",24,24,50,150},
 	["sliders-horizontal"] = {"rbxassetid://105958624998202",24,24,200,25},
 	["smile"] = {"rbxassetid://105958624998202",24,24,25,200},
 	["sparkles"] = {"rbxassetid://105958624998202",24,24,50,200},
@@ -4828,6 +4904,7 @@ local sprites = {
 	["store"] = {"rbxassetid://105958624998202",24,24,250,250},
 	["sun"] = {"rbxassetid://105958624998202",24,24,0,500},
 	["sun-medium"] = {"rbxassetid://105958624998202",24,24,75,425},
+	["sword"] = {"rbxassetid://105958624998202",24,24,375,150},
 	["swords"] = {"rbxassetid://105958624998202",24,24,350,175},
 	["tabler:chevron-down"] = {"rbxassetid://110003049542328",24,24,975,900},
 	["tabler:chevron-right"] = {"rbxassetid://110003049542328",24,24,950,950},
@@ -4841,6 +4918,7 @@ local sprites = {
 	["ticket"] = {"rbxassetid://105958624998202",24,24,75,500},
 	["trash"] = {"rbxassetid://105958624998202",24,24,575,50},
 	["trash-2"] = {"rbxassetid://105958624998202",24,24,575,50},
+	["trees"] = {"rbxassetid://105958624998202",24,24,475,150},
 	["triangle-alert"] = {"rbxassetid://105958624998202",24,24,350,275},
 	["trophy"] = {"rbxassetid://105958624998202",24,24,200,425},
 	["unlock"] = {"rbxassetid://118199753695009",24,24,725,500},

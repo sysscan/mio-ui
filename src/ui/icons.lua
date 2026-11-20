@@ -109,6 +109,7 @@ local Aliases = {
 	[ "alert-triangle" ] = "Warning",
 	[ "triangle-alert" ] = "Warning",
 	[ "zap" ] = "Bomb",
+	[ "bell" ] = "Info",
 	[ "ticket" ] = "Cube",
 	[ "box" ] = "Cube",
 	[ "gun" ] = "Gun",
@@ -203,6 +204,10 @@ local PAGE_ICONS = {
 	[ "client" ] = "settings";
 	[ "misc" ] = "layout-grid";
 	[ "extras" ] = "puzzle";
+	[ "survival" ] = "heart-pulse";
+	[ "progress" ] = "trending-up";
+	[ "debug" ] = "bug";
+	[ "rig" ] = "bone";
 };
 
 -- Kept under its old name: games and the bundler read Icons.pageDefaults.

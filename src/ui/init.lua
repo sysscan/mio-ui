@@ -442,6 +442,8 @@ function UI.create(opts)
 	-- unreadable -- which is the thing the readout exists to avoid.
 	Occlusion.watch("hub.window", window.shell)
 	Occlusion.watch("hub.hud", hud.container)
+	Occlusion.watch( "hub.pill", window.pill );
+	Occlusion.watch( "hub.reopen", window.floatingButton );
 	if ( overlay ) then
 		local Containers = overlay : Containers( );
 		Occlusion.watch( "hub.watermark", Containers[ 1 ] );
@@ -450,6 +452,8 @@ function UI.create(opts)
 	maid:give(function()
 		Occlusion.unwatch("hub.window")
 		Occlusion.unwatch("hub.hud")
+		Occlusion.unwatch( "hub.pill" );
+		Occlusion.unwatch( "hub.reopen" );
 		Occlusion.unwatch( "hub.watermark" );
 		Occlusion.unwatch( "hub.keybinds" );
 	end)

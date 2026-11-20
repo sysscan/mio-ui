@@ -2,6 +2,7 @@ local Runtime = require("core/runtime.lua")
 local Theme = require("ui/theme.lua")
 local Icons = require("ui/icons.lua")
 local P = require("ui/primitives.lua")
+local Occlusion = require("visuals/occlusion.lua")
 
 local Notify = {}
 
@@ -11,6 +12,7 @@ local activeCards = {}
 local expiryTasks = {}
 local HOST_ATTRIBUTE = "MicroHubNotificationHostV1"
 local cleanupScheduled = false
+local cardCount = 0
 
 local function scheduleHostCleanup()
 	if cleanupScheduled then
@@ -129,7 +131,12 @@ function Notify.push(arg, duration: number?, color: Color3?)
 		Parent = holder,
 	})
 	table.insert(activeCards, card)
+	-- Drawing paints above ScreenGuis, so each toast is registered for the ESP to keep clear of.
+	cardCount += 1
+	local occlusionKey = "hub.toast." .. cardCount
+	Occlusion.watch(occlusionKey, card)
 	card.Destroying:Connect(function()
+		Occlusion.unwatch(occlusionKey)
 		local expiryThread = expiryTasks[card]
 		if expiryThread then
 			pcall(task.cancel, expiryThread)

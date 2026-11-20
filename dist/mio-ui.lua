@@ -3922,6 +3922,8 @@ function UI.create(opts)
 	-- unreadable -- which is the thing the readout exists to avoid.
 	Occlusion.watch("hub.window", window.shell)
 	Occlusion.watch("hub.hud", hud.container)
+	Occlusion.watch( "hub.pill", window.pill );
+	Occlusion.watch( "hub.reopen", window.floatingButton );
 	if ( overlay ) then
 		local Containers = overlay : Containers( );
 		Occlusion.watch( "hub.watermark", Containers[ 1 ] );
@@ -3930,6 +3932,8 @@ function UI.create(opts)
 	maid:give(function()
 		Occlusion.unwatch("hub.window")
 		Occlusion.unwatch("hub.hud")
+		Occlusion.unwatch( "hub.pill" );
+		Occlusion.unwatch( "hub.reopen" );
 		Occlusion.unwatch( "hub.watermark" );
 		Occlusion.unwatch( "hub.keybinds" );
 	end)
@@ -4988,6 +4992,7 @@ local Runtime = require("core/runtime.lua")
 local Theme = require("ui/theme.lua")
 local Icons = require("ui/icons.lua")
 local P = require("ui/primitives.lua")
+local Occlusion = require("visuals/occlusion.lua")
 
 local Notify = {}
 
@@ -4997,6 +5002,7 @@ local activeCards = {}
 local expiryTasks = {}
 local HOST_ATTRIBUTE = "MicroHubNotificationHostV1"
 local cleanupScheduled = false
+local cardCount = 0
 
 local function scheduleHostCleanup()
 	if cleanupScheduled then
@@ -5115,7 +5121,12 @@ function Notify.push(arg, duration: number?, color: Color3?)
 		Parent = holder,
 	})
 	table.insert(activeCards, card)
+	-- Drawing paints above ScreenGuis, so each toast is registered for the ESP to keep clear of.
+	cardCount += 1
+	local occlusionKey = "hub.toast." .. cardCount
+	Occlusion.watch(occlusionKey, card)
 	card.Destroying:Connect(function()
+		Occlusion.unwatch(occlusionKey)
 		local expiryThread = expiryTasks[card]
 		if expiryThread then
 			pcall(task.cancel, expiryThread)

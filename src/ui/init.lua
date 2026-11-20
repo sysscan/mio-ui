@@ -611,11 +611,12 @@ function UI.create(opts)
 					Parent = parent;
 				} );
 				P.create( "UIGridLayout", {
-					CellSize = UDim2.new( 0.5, -3, 0, theme.touch and 36 or 30 );
-					CellPadding = UDim2.fromOffset( 6, 6 );
+					CellSize = UDim2.new( 0.5, -2, 0, theme.touch and 32 or 22 );
+					CellPadding = UDim2.fromOffset( 4, 4 );
 					SortOrder = Enum.SortOrder.LayoutOrder;
 					Parent = ButtonGrid;
 				} );
+				P.paddingXY( ButtonGrid, 6, 0 );
 			end
 
 			if ( itemType == "button" and ButtonGrid ) then
@@ -1028,19 +1029,21 @@ function UI.create(opts)
 				local Status = COMPONENTS.label( Saved, { type = "label", id = "__configStatus", text = "Active: " .. tostring( ConfigStore.activeProfile( configName ) or "Default" ) }, hubCtx );
 
 				-- Built from primitives (not the text component) so the name buffer never lands in a save.
-				local CreateRow = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 30 ), BackgroundTransparency = 1, Parent = Saved } );
+				local CreateRow = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 22 ), BackgroundTransparency = 1, Parent = Saved } );
+				P.paddingXY( CreateRow, 6, 0 );
 				local NameBox = P.create( "TextBox", {
-					Size = UDim2.new( 1, -96, 1, 0 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
+					Size = UDim2.new( 1, -84, 1, 0 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
 					Text = ""; PlaceholderText = "Config name"; ClearTextOnFocus = false;
-					FontFace = theme.fontFace; TextSize = theme.textSize - 1; TextColor3 = theme.text;
+					FontFace = theme.fontFace; TextSize = theme.textSizeSmall; TextColor3 = theme.text;
 					PlaceholderColor3 = theme.textFaint; TextXAlignment = Enum.TextXAlignment.Left; Parent = CreateRow;
 				} ) :: TextBox;
 				P.corner( NameBox, theme.cornerSmall );
 				P.stroke( NameBox, theme.stroke, 1, 0 );
 				P.paddingXY( NameBox, 10, 0 );
-				local CreateHost = P.create( "Frame", { AnchorPoint = Vector2.new( 1, 0 ), Position = UDim2.fromScale( 1, 0 ), Size = UDim2.new( 0, 88, 1, 0 ), BackgroundTransparency = 1, Parent = CreateRow } );
+				local CreateHost = P.create( "Frame", { AnchorPoint = Vector2.new( 1, 0 ), Position = UDim2.fromScale( 1, 0 ), Size = UDim2.new( 0, 78, 1, 0 ), BackgroundTransparency = 1, Parent = CreateRow } );
 
 				local List = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 0 ), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = Saved } );
+				P.paddingXY( List, 6, 0 );
 				P.listLayout( List, 4 );
 				local RefreshList;
 
@@ -1075,7 +1078,7 @@ function UI.create(opts)
 					for Order, Name in ConfigStore.profiles( configName ) do
 						local IsActive = Name == Active;
 						local Row = P.create( "Frame", {
-							Size = UDim2.new( 1, 0, 0, 30 ); BackgroundColor3 = theme.surfaceAlt;
+							Size = UDim2.new( 1, 0, 0, 26 ); BackgroundColor3 = theme.surfaceAlt;
 							BorderSizePixel = 0; LayoutOrder = Order; Parent = List;
 						} );
 						P.corner( Row, theme.cornerSmall );
@@ -1123,7 +1126,7 @@ function UI.create(opts)
 				end
 
 				COMPONENTS.button( CreateHost, {
-					label = "Create"; variant = "primary";
+					label = "Create"; variant = "primary"; inset = false;
 					onClick = function( )
 						local Success, Message = ConfigStore.createProfile( configName, NameBox.Text );
 						Report( Success, Success and ( "Created " .. tostring( ConfigStore.activeProfile( configName ) ) .. "." ) or Message );
@@ -1137,11 +1140,13 @@ function UI.create(opts)
 				RefreshList( );
 
 				local Share = ConfigsPage : addSection( "Share", { collapsible = false } );
+				local ImportHost = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 22 ), BackgroundTransparency = 1, Parent = Share } );
+				P.paddingXY( ImportHost, 6, 0 );
 				local ImportBox = P.create( "TextBox", {
-					Size = UDim2.new( 1, 0, 0, 30 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
+					Size = UDim2.fromScale( 1, 1 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
 					Text = ""; PlaceholderText = "Paste config JSON"; ClearTextOnFocus = false;
-					FontFace = theme.fontFace; TextSize = theme.textSize - 1; TextColor3 = theme.text;
-					PlaceholderColor3 = theme.textFaint; TextXAlignment = Enum.TextXAlignment.Left; TextTruncate = Enum.TextTruncate.AtEnd; Parent = Share;
+					FontFace = theme.fontFace; TextSize = theme.textSizeSmall; TextColor3 = theme.text;
+					PlaceholderColor3 = theme.textFaint; TextXAlignment = Enum.TextXAlignment.Left; TextTruncate = Enum.TextTruncate.AtEnd; Parent = ImportHost;
 				} ) :: TextBox;
 				P.corner( ImportBox, theme.cornerSmall );
 				P.stroke( ImportBox, theme.stroke, 1, 0 );

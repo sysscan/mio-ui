@@ -3,8 +3,8 @@ local Runtime = require("core/runtime.lua")
 local Icons = require("ui/icons.lua")
 local Common = require("ui/components/common.lua")
 
-local BUTTON_HEIGHT = 24
-local BUTTON_ICON_SIZE = 13
+local BUTTON_HEIGHT = 22
+local BUTTON_ICON_SIZE = 11
 
 local function inferIcon(label: string): string?
 	local lower = string.lower(label)
@@ -54,12 +54,19 @@ return function(section: Instance, spec, ctx)
 	local theme = ctx.theme
 	local variant = spec.variant or "secondary"
 	local labelText = spec.label or spec.text or "Run"
+	-- Same height as the other controls; touch keeps a thumb-sized target.
+	local Height = theme.touch and 32 or BUTTON_HEIGHT
 
 	local holder = P.create("Frame", {
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, BUTTON_HEIGHT),
+		Size = UDim2.new(1, 0, 0, Height),
 		Parent = section,
 	})
+	-- Line up with the rows' 6 px side padding; a button grid pads itself, and `inset = false` is for a
+	-- button placed in a host that is already aligned.
+	if spec.inset ~= false and not section:FindFirstChildOfClass("UIGridLayout") then
+		P.paddingXY(holder, 6, 0)
+	end
 
 	-- Primary buttons carry the accent fill; everything else is a quiet control-coloured button.
 	local Primary = variant == "primary"
@@ -105,11 +112,11 @@ return function(section: Instance, spec, ctx)
 	local label = P.label(row, labelText, {
 		Theme = theme,
 		AutomaticSize = Enum.AutomaticSize.XY,
-		Size = UDim2.fromOffset(0, BUTTON_HEIGHT),
+		Size = UDim2.fromOffset(0, Height),
 		TextXAlignment = Enum.TextXAlignment.Center,
 		Font = theme.fontMedium,
 		TextColor3 = Primary and theme.background or theme.text,
-		TextSize = theme.textSize - 1,
+		TextSize = theme.textSizeSmall,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
 	local LabelBounds = P.create( "UISizeConstraint", { Parent = label } );
@@ -118,7 +125,7 @@ return function(section: Instance, spec, ctx)
 		if ( icon ) then
 			Reserved += BUTTON_ICON_SIZE + 6;
 		end
-		LabelBounds.MaxSize = Vector2.new( math.max( 0, row.AbsoluteSize.X - Reserved ), BUTTON_HEIGHT );
+		LabelBounds.MaxSize = Vector2.new( math.max( 0, row.AbsoluteSize.X - Reserved ), Height );
 	end
 	Common.connect( ctx, row : GetPropertyChangedSignal( "AbsoluteSize" ), RefreshLabelBounds );
 	RefreshLabelBounds( );

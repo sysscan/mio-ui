@@ -58,8 +58,8 @@ local Runtime = require("core/runtime.lua")
 local Icons = require("ui/icons.lua")
 local Common = require("ui/components/common.lua")
 
-local BUTTON_HEIGHT = 24
-local BUTTON_ICON_SIZE = 13
+local BUTTON_HEIGHT = 22
+local BUTTON_ICON_SIZE = 11
 
 local function inferIcon(label: string): string?
 	local lower = string.lower(label)
@@ -109,12 +109,19 @@ return function(section: Instance, spec, ctx)
 	local theme = ctx.theme
 	local variant = spec.variant or "secondary"
 	local labelText = spec.label or spec.text or "Run"
+	-- Same height as the other controls; touch keeps a thumb-sized target.
+	local Height = theme.touch and 32 or BUTTON_HEIGHT
 
 	local holder = P.create("Frame", {
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, BUTTON_HEIGHT),
+		Size = UDim2.new(1, 0, 0, Height),
 		Parent = section,
 	})
+	-- Line up with the rows' 6 px side padding; a button grid pads itself, and `inset = false` is for a
+	-- button placed in a host that is already aligned.
+	if spec.inset ~= false and not section:FindFirstChildOfClass("UIGridLayout") then
+		P.paddingXY(holder, 6, 0)
+	end
 
 	-- Primary buttons carry the accent fill; everything else is a quiet control-coloured button.
 	local Primary = variant == "primary"
@@ -160,11 +167,11 @@ return function(section: Instance, spec, ctx)
 	local label = P.label(row, labelText, {
 		Theme = theme,
 		AutomaticSize = Enum.AutomaticSize.XY,
-		Size = UDim2.fromOffset(0, BUTTON_HEIGHT),
+		Size = UDim2.fromOffset(0, Height),
 		TextXAlignment = Enum.TextXAlignment.Center,
 		Font = theme.fontMedium,
 		TextColor3 = Primary and theme.background or theme.text,
-		TextSize = theme.textSize - 1,
+		TextSize = theme.textSizeSmall,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
 	local LabelBounds = P.create( "UISizeConstraint", { Parent = label } );
@@ -173,7 +180,7 @@ return function(section: Instance, spec, ctx)
 		if ( icon ) then
 			Reserved += BUTTON_ICON_SIZE + 6;
 		end
-		LabelBounds.MaxSize = Vector2.new( math.max( 0, row.AbsoluteSize.X - Reserved ), BUTTON_HEIGHT );
+		LabelBounds.MaxSize = Vector2.new( math.max( 0, row.AbsoluteSize.X - Reserved ), Height );
 	end
 	Common.connect( ctx, row : GetPropertyChangedSignal( "AbsoluteSize" ), RefreshLabelBounds );
 	RefreshLabelBounds( );
@@ -3870,11 +3877,12 @@ function UI.create(opts)
 					Parent = parent;
 				} );
 				P.create( "UIGridLayout", {
-					CellSize = UDim2.new( 0.5, -3, 0, theme.touch and 36 or 30 );
-					CellPadding = UDim2.fromOffset( 6, 6 );
+					CellSize = UDim2.new( 0.5, -2, 0, theme.touch and 32 or 22 );
+					CellPadding = UDim2.fromOffset( 4, 4 );
 					SortOrder = Enum.SortOrder.LayoutOrder;
 					Parent = ButtonGrid;
 				} );
+				P.paddingXY( ButtonGrid, 6, 0 );
 			end
 
 			if ( itemType == "button" and ButtonGrid ) then
@@ -4287,19 +4295,21 @@ function UI.create(opts)
 				local Status = COMPONENTS.label( Saved, { type = "label", id = "__configStatus", text = "Active: " .. tostring( ConfigStore.activeProfile( configName ) or "Default" ) }, hubCtx );
 
 				-- Built from primitives (not the text component) so the name buffer never lands in a save.
-				local CreateRow = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 30 ), BackgroundTransparency = 1, Parent = Saved } );
+				local CreateRow = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 22 ), BackgroundTransparency = 1, Parent = Saved } );
+				P.paddingXY( CreateRow, 6, 0 );
 				local NameBox = P.create( "TextBox", {
-					Size = UDim2.new( 1, -96, 1, 0 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
+					Size = UDim2.new( 1, -84, 1, 0 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
 					Text = ""; PlaceholderText = "Config name"; ClearTextOnFocus = false;
-					FontFace = theme.fontFace; TextSize = theme.textSize - 1; TextColor3 = theme.text;
+					FontFace = theme.fontFace; TextSize = theme.textSizeSmall; TextColor3 = theme.text;
 					PlaceholderColor3 = theme.textFaint; TextXAlignment = Enum.TextXAlignment.Left; Parent = CreateRow;
 				} ) :: TextBox;
 				P.corner( NameBox, theme.cornerSmall );
 				P.stroke( NameBox, theme.stroke, 1, 0 );
 				P.paddingXY( NameBox, 10, 0 );
-				local CreateHost = P.create( "Frame", { AnchorPoint = Vector2.new( 1, 0 ), Position = UDim2.fromScale( 1, 0 ), Size = UDim2.new( 0, 88, 1, 0 ), BackgroundTransparency = 1, Parent = CreateRow } );
+				local CreateHost = P.create( "Frame", { AnchorPoint = Vector2.new( 1, 0 ), Position = UDim2.fromScale( 1, 0 ), Size = UDim2.new( 0, 78, 1, 0 ), BackgroundTransparency = 1, Parent = CreateRow } );
 
 				local List = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 0 ), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = Saved } );
+				P.paddingXY( List, 6, 0 );
 				P.listLayout( List, 4 );
 				local RefreshList;
 
@@ -4334,7 +4344,7 @@ function UI.create(opts)
 					for Order, Name in ConfigStore.profiles( configName ) do
 						local IsActive = Name == Active;
 						local Row = P.create( "Frame", {
-							Size = UDim2.new( 1, 0, 0, 30 ); BackgroundColor3 = theme.surfaceAlt;
+							Size = UDim2.new( 1, 0, 0, 26 ); BackgroundColor3 = theme.surfaceAlt;
 							BorderSizePixel = 0; LayoutOrder = Order; Parent = List;
 						} );
 						P.corner( Row, theme.cornerSmall );
@@ -4382,7 +4392,7 @@ function UI.create(opts)
 				end
 
 				COMPONENTS.button( CreateHost, {
-					label = "Create"; variant = "primary";
+					label = "Create"; variant = "primary"; inset = false;
 					onClick = function( )
 						local Success, Message = ConfigStore.createProfile( configName, NameBox.Text );
 						Report( Success, Success and ( "Created " .. tostring( ConfigStore.activeProfile( configName ) ) .. "." ) or Message );
@@ -4396,11 +4406,13 @@ function UI.create(opts)
 				RefreshList( );
 
 				local Share = ConfigsPage : addSection( "Share", { collapsible = false } );
+				local ImportHost = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 22 ), BackgroundTransparency = 1, Parent = Share } );
+				P.paddingXY( ImportHost, 6, 0 );
 				local ImportBox = P.create( "TextBox", {
-					Size = UDim2.new( 1, 0, 0, 30 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
+					Size = UDim2.fromScale( 1, 1 ); BackgroundColor3 = theme.control; BorderSizePixel = 0;
 					Text = ""; PlaceholderText = "Paste config JSON"; ClearTextOnFocus = false;
-					FontFace = theme.fontFace; TextSize = theme.textSize - 1; TextColor3 = theme.text;
-					PlaceholderColor3 = theme.textFaint; TextXAlignment = Enum.TextXAlignment.Left; TextTruncate = Enum.TextTruncate.AtEnd; Parent = Share;
+					FontFace = theme.fontFace; TextSize = theme.textSizeSmall; TextColor3 = theme.text;
+					PlaceholderColor3 = theme.textFaint; TextXAlignment = Enum.TextXAlignment.Left; TextTruncate = Enum.TextTruncate.AtEnd; Parent = ImportHost;
 				} ) :: TextBox;
 				P.corner( ImportBox, theme.cornerSmall );
 				P.stroke( ImportBox, theme.stroke, 1, 0 );

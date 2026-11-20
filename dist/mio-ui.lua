@@ -6790,6 +6790,12 @@ function Window : _fitSidebar( )
 	end
 
 	local Needed = math.ceil( Widest + TAB_INSET * 2 + TAB_TEXT_LEFT + TAB_TEXT_RIGHT );
+
+	-- The game name under the brand starts 44 px in and keeps 8 px clear on the right.
+	if ( self.gameLabel ) then
+		Needed = math.max( Needed, math.ceil( self : _measure( self.gameLabel.Text, self.theme.textSizeSmall - 1 ) + 52 ) );
+	end
+
 	local Width = math.min( math.max( Needed, TAB_MIN_WIDTH ), self.theme.tabWidth or 144 );
 
 	if ( Width == self._fitWidth ) then

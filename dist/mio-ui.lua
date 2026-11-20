@@ -2051,7 +2051,7 @@ local P = require("ui/primitives.lua")
 local Common = require("ui/components/common.lua")
 
 local UserInputService = Services.UserInputService
-local TRACK_HEIGHT = 8
+local TRACK_HEIGHT = 10
 local VALUE_WIDTH = 50
 -- One line: label on the left 42%, a flat bar in the middle, the editable value on the right.
 local LABEL_SHARE = 0.42
@@ -2102,12 +2102,19 @@ return function(section: Instance, spec, ctx)
 		AnchorPoint = Vector2.new(0, 0.5),
 		Position = UDim2.new(LABEL_SHARE, TRACK_INSET, 0.5, 0),
 		Size = UDim2.new(1 - LABEL_SHARE, -(TRACK_INSET * 2 + VALUE_WIDTH + 8), 0, TRACK_HEIGHT),
-		BackgroundColor3 = theme.control,
+		BackgroundColor3 = theme.stroke,
 		BorderSizePixel = 0,
 		Parent = row,
 	})
 	local trackStroke = P.stroke(track, theme.outline or theme.stroke, 1, 0)
 	P.gradient(track, Color3.new(1, 1, 1), Color3.fromRGB(175, 175, 175), 90)
+	-- Black outer line plus a grey inner one, so the empty bar reads against the section card.
+	local TrackInner = P.create( "Frame", {
+		BackgroundTransparency = 1; BorderSizePixel = 0;
+		Position = UDim2.fromOffset( 1, 1 ); Size = UDim2.new( 1, -2, 1, -2 );
+		Parent = track;
+	} );
+	local TrackInnerStroke = P.stroke( TrackInner, theme.strokeBright or theme.stroke, 1, 0 );
 
 	local fill = P.create("Frame", {
 		BackgroundColor3 = theme.accent,
@@ -2229,8 +2236,9 @@ return function(section: Instance, spec, ctx)
 		Editor.BackgroundColor3 = theme.control;
 		Editor.TextColor3 = Editor : IsFocused( ) and theme.text or theme.textDim;
 		EditorStroke.Color = theme.accent;
-		track.BackgroundColor3 = theme.control
+		track.BackgroundColor3 = theme.stroke
 		trackStroke.Color = theme.outline or theme.stroke
+		TrackInnerStroke.Color = theme.strokeBright or theme.stroke
 		fill.BackgroundColor3 = theme.accent
 		fillGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(165, 165, 165))
 
@@ -5728,7 +5736,8 @@ return P]];
 -- override reads them by these names, so they are part of the Hub.UI contract.
 
 -- Constants
-local FONT_FAMILY = "rbxasset://fonts/families/Ubuntu.json";
+-- Inter (Creator Store font 12187365364): built for small UI text, taller x-height than Ubuntu.
+local FONT_FAMILY = "rbxassetid://12187365364";
 local MONO_FAMILY = "rbxasset://fonts/families/RobotoMono.json";
 
 -- Utilities
@@ -5780,9 +5789,10 @@ Theme.active = {
 	fontMedium = Enum.Font.GothamMedium;
 	fontBold = Enum.Font.GothamBold;
 	fontFamily = FONT_FAMILY;
-	fontFace = FontFace( FONT_FAMILY, Enum.FontWeight.Regular );
-	-- Script menus run one weight for every label; bold is kept for titles.
-	fontFaceMedium = FontFace( FONT_FAMILY, Enum.FontWeight.Regular );
+	-- Script menus run one weight for every label; bold is kept for titles. Inter's Regular is too thin
+	-- on a dark panel at 12-14 px, so labels use Medium.
+	fontFace = FontFace( FONT_FAMILY, Enum.FontWeight.Medium );
+	fontFaceMedium = FontFace( FONT_FAMILY, Enum.FontWeight.Medium );
 	fontFaceBold = FontFace( FONT_FAMILY, Enum.FontWeight.Bold );
 	fontFaceMono = FontFace( MONO_FAMILY, Enum.FontWeight.Regular );
 	textSize = 14;

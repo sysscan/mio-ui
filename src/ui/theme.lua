@@ -2,7 +2,8 @@
 -- override reads them by these names, so they are part of the Hub.UI contract.
 
 -- Constants
-local FONT_FAMILY = "rbxasset://fonts/families/Ubuntu.json";
+-- Inter (Creator Store font 12187365364): built for small UI text, taller x-height than Ubuntu.
+local FONT_FAMILY = "rbxassetid://12187365364";
 local MONO_FAMILY = "rbxasset://fonts/families/RobotoMono.json";
 
 -- Utilities
@@ -54,9 +55,10 @@ Theme.active = {
 	fontMedium = Enum.Font.GothamMedium;
 	fontBold = Enum.Font.GothamBold;
 	fontFamily = FONT_FAMILY;
-	fontFace = FontFace( FONT_FAMILY, Enum.FontWeight.Regular );
-	-- Script menus run one weight for every label; bold is kept for titles.
-	fontFaceMedium = FontFace( FONT_FAMILY, Enum.FontWeight.Regular );
+	-- Script menus run one weight for every label; bold is kept for titles. Inter's Regular is too thin
+	-- on a dark panel at 12-14 px, so labels use Medium.
+	fontFace = FontFace( FONT_FAMILY, Enum.FontWeight.Medium );
+	fontFaceMedium = FontFace( FONT_FAMILY, Enum.FontWeight.Medium );
 	fontFaceBold = FontFace( FONT_FAMILY, Enum.FontWeight.Bold );
 	fontFaceMono = FontFace( MONO_FAMILY, Enum.FontWeight.Regular );
 	textSize = 14;

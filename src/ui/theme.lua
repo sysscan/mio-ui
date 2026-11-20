@@ -65,8 +65,9 @@ Theme.active = {
 	textSizeSmall = 12;
 	textSizeTitle = 14;
 
-	corner = 3;
-	cornerSmall = 2;
+	-- One radius for every rounded box: window, panels, controls and tabs.
+	corner = 4;
+	cornerSmall = 4;
 	rowHeight = 25;
 	controlHeight = 21;
 	padding = 10;
@@ -77,7 +78,8 @@ Theme.active = {
 	headerHeight = 38;
 	tabHeight = 28;
 	windowSize = Vector2.new( 820, 540 );
-	tabWidth = 160;
+	-- Cap on the full sidebar; it shrinks to its longest label (ui/window.lua).
+	tabWidth = 144;
 	columnGap = 10;
 	logoImage = "MicroHub/src/ui/assets/mioicon.png";
 	logoImageAlt = "src/ui/assets/mioicon.png";

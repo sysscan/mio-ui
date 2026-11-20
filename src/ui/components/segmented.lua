@@ -89,7 +89,7 @@ return function( Section: Instance, Spec: any, Context: any ): any
 			LayoutOrder = Order;
 			Parent = Track;
 		} );
-		P.corner( Button, math.max( 2, Theme.cornerSmall - 2 ) );
+		P.corner( Button, Theme.cornerSmall );
 		Buttons[ #Buttons + 1 ] = { button = Button, value = OptionValue( Option ) };
 		Common.connect( Context, Button.Activated, function( )
 			Control.set( OptionValue( Option ) );

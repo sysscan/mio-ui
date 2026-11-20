@@ -135,7 +135,7 @@ local function applyImportedConfig(configTable, configName: string?, json: strin
 end
 
 local UI = {}
-UI.version = "7.2.0"
+UI.version = "7.3.0"
 UI.colorPresets = Theme.colorPresets
 UI.icons = Icons
 UI.notify = Notify.push
@@ -452,7 +452,6 @@ function UI.create(opts)
 	end)
 
 	local refreshHud
-	local RefreshActive;
 	local RefreshOverlay;
 
 	local Mirrors = { };
@@ -514,9 +513,6 @@ function UI.create(opts)
 				end
 				if refreshHud then
 					refreshHud(key)
-				end
-				if ( RefreshActive ) then
-					RefreshActive( );
 				end
 			end
 			if ( RefreshOverlay ) then
@@ -862,7 +858,8 @@ function UI.create(opts)
 		end
 	end)
 
-	-- Hub pages pinned in the sidebar footer: Favorites (ui/workspace.lua), Configs, Settings. The
+	-- Hub pages pinned in the sidebar footer: Favorites (ui/workspace.lua) and Settings, which also
+	-- holds the saved configs. The
 	-- header search field is wired up by the workspace as well.
 	local Workspace = FeatureWorkspace( {
 		window = window; context = ctx; components = COMPONENTS;
@@ -894,100 +891,6 @@ function UI.create(opts)
 
 		return "None";
 	end
-
-	-- Active features: every toggle that is on, on any page, behind the header's "N on" chip.
-	local Toggles = { };
-
-	for _, Entry in Workspace.entries do
-		if ( Entry.spec.type == "toggle" and Entry.key ) then
-			Toggles[ #Toggles + 1 ] = Entry;
-		end
-	end
-
-	local function ActiveToggles( ): { any }
-		local Active = { };
-
-		for _, Entry in Toggles do
-			if ( config[ Entry.key ] == true ) then
-				Active[ #Active + 1 ] = Entry;
-			end
-		end
-
-		return Active;
-	end
-
-	RefreshActive = function( )
-		if ( controller._destroyed ) then
-			return;
-		end
-
-		window : setActiveCount( #ActiveToggles( ) );
-	end
-
-	local function FillActive( Panel: Instance )
-		for _, Child in Panel : GetChildren( ) do
-			if ( Child : IsA( "GuiObject" ) ) then
-				Child : Destroy( );
-			end
-		end
-
-		local Active = ActiveToggles( );
-
-		if ( #Active == 0 ) then
-			P.label( Panel, "Nothing is on", { Theme = theme, Size = UDim2.new( 1, 0, 0, 28 ), TextColor3 = theme.textDim, TextSize = theme.textSizeSmall + 1 } );
-			return;
-		end
-
-		for Order, Entry in Active do
-			local Row = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 34 ), BackgroundTransparency = 1, LayoutOrder = Order, Parent = Panel } );
-			P.label( Row, Entry.label, {
-				Theme = theme; Size = UDim2.new( 1, -64, 0, 18 ); Position = UDim2.fromOffset( 2, 0 );
-				Font = theme.fontMedium; TextSize = theme.textSize - 1; TextColor3 = theme.text; TextTruncate = Enum.TextTruncate.AtEnd;
-			} );
-			P.label( Row, Entry.page.label .. " / " .. tostring( Entry.section.title or "General" ), {
-				Theme = theme; Size = UDim2.new( 1, -64, 0, 14 ); Position = UDim2.fromOffset( 2, 18 );
-				TextSize = theme.textSizeSmall - 1; TextColor3 = theme.textFaint; TextTruncate = Enum.TextTruncate.AtEnd;
-			} );
-			local Off = Common.clickable( Row, theme, { maid = maid, getBaseColor = function( ) return theme.control; end } );
-			Off.AnchorPoint = Vector2.new( 1, 0.5 );
-			Off.Position = UDim2.new( 1, 0, 0.5, 0 );
-			Off.Size = UDim2.fromOffset( 52, 24 );
-			Off.Text = "Off";
-			Off.FontFace = theme.fontFaceMedium;
-			Off.TextSize = theme.textSizeSmall;
-			Off.TextColor3 = theme.text;
-			maid : give( Off.Activated : Connect( function( )
-				BuildAllPages( );
-				local Control = ctx.controls[ Entry.key ];
-
-				if ( Control and Control.set ) then
-					Control.set( false );
-				end
-
-				config[ Entry.key ] = false;
-				RefreshActive( );
-				FillActive( Panel );
-			end ) );
-		end
-	end
-
-	window.onActiveClick = function( Anchor: GuiObject )
-		local Panel = window : openPopover( Anchor, 300, 380 );
-		FillActive( Panel );
-	end
-
-	-- Game code flips toggles silently (control.set( v, true )) for presets and exclusive pairs, which
-	-- never reaches dispatch, so the count also re-reads config while the menu is open.
-	task.spawn( function( )
-		while ( not controller._destroyed ) do
-			if ( window : isVisible( ) ) then
-				RefreshActive( );
-			end
-
-			task.wait( 0.5 );
-		end
-	end );
-	RefreshActive( );
 
 	-- Keybind list: every keybind on a feature page, named after its own label or, for generic
 	-- labels like "Toggle Key", the group or section it sits in. A bind is shown as on when the
@@ -1099,9 +1002,12 @@ function UI.create(opts)
 			controller : refreshTheme( );
 		end
 
+		-- Saved configs live on the Settings page, built with the rest of it on first open.
+		local settingsPage = window : addPage( "Settings", "settings", { utility = true } );
+		local BuildSavedConfigs = nil;
+
 		if ( configName ) then
-			local ConfigsPage = window : addPage( "Configs", "package", { utility = true } );
-			ConfigsPage.singleColumn = true;
+			local ConfigsPage = settingsPage;
 
 			local function BuildConfigs( )
 				local Saved = ConfigsPage : addSection( "Saved Configs", { collapsible = false } );
@@ -1260,12 +1166,9 @@ function UI.create(opts)
 				} );
 			end
 
-			local ConfigsIndex = #window.pages;
-			PageBuilders[ ConfigsIndex ] = BuildConfigs;
-			PageOrder[ #PageOrder + 1 ] = ConfigsIndex;
+			BuildSavedConfigs = BuildConfigs;
 		end
 
-		local settingsPage = window : addPage( "Settings", "settings", { utility = true } );
 		local KeybindList = nil;
 
 		local function FillKeybinds( )
@@ -1375,6 +1278,10 @@ function UI.create(opts)
 					controller : refreshTheme( );
 				end;
 			}, hubCtx );
+
+			if ( BuildSavedConfigs ) then
+				BuildSavedConfigs( );
+			end
 
 			KeybindList = settingsPage : addSection( "Keybinds" );
 			FillKeybinds( );

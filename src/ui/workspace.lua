@@ -275,7 +275,6 @@ return function( Options: any ): any
 			return;
 		end
 
-		Window : closePopover( );
 		Panel.Visible = true;
 		Catcher.Visible = true;
 		Refresh( );

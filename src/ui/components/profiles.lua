@@ -99,7 +99,7 @@ return function( Section: Instance, Spec: any, Context: any ): any
 			LayoutOrder = Order;
 			Parent = Strip;
 		} );
-		P.corner( Tab, math.max( 2, Theme.cornerSmall - 2 ) );
+		P.corner( Tab, Theme.cornerSmall );
 		P.paddingXY( Tab, 12, 0 );
 		Tabs[ Name ] = Tab;
 		Common.connect( Context, Tab.Activated, function( ) Show( Name ); end );

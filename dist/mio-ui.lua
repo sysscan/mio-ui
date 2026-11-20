@@ -1875,7 +1875,7 @@ return function( Section: Instance, Spec: any, Context: any ): any
 			LayoutOrder = Order;
 			Parent = Strip;
 		} );
-		P.corner( Tab, math.max( 2, Theme.cornerSmall - 2 ) );
+		P.corner( Tab, Theme.cornerSmall );
 		P.paddingXY( Tab, 12, 0 );
 		Tabs[ Name ] = Tab;
 		Common.connect( Context, Tab.Activated, function( ) Show( Name ); end );
@@ -2003,7 +2003,7 @@ return function( Section: Instance, Spec: any, Context: any ): any
 			LayoutOrder = Order;
 			Parent = Track;
 		} );
-		P.corner( Button, math.max( 2, Theme.cornerSmall - 2 ) );
+		P.corner( Button, Theme.cornerSmall );
 		Buttons[ #Buttons + 1 ] = { button = Button, value = OptionValue( Option ) };
 		Common.connect( Context, Button.Activated, function( )
 			Control.set( OptionValue( Option ) );
@@ -3388,7 +3388,7 @@ local function applyImportedConfig(configTable, configName: string?, json: strin
 end
 
 local UI = {}
-UI.version = "7.2.0"
+UI.version = "7.3.0"
 UI.colorPresets = Theme.colorPresets
 UI.icons = Icons
 UI.notify = Notify.push
@@ -3705,7 +3705,6 @@ function UI.create(opts)
 	end)
 
 	local refreshHud
-	local RefreshActive;
 	local RefreshOverlay;
 
 	local Mirrors = { };
@@ -3767,9 +3766,6 @@ function UI.create(opts)
 				end
 				if refreshHud then
 					refreshHud(key)
-				end
-				if ( RefreshActive ) then
-					RefreshActive( );
 				end
 			end
 			if ( RefreshOverlay ) then
@@ -4115,7 +4111,8 @@ function UI.create(opts)
 		end
 	end)
 
-	-- Hub pages pinned in the sidebar footer: Favorites (ui/workspace.lua), Configs, Settings. The
+	-- Hub pages pinned in the sidebar footer: Favorites (ui/workspace.lua) and Settings, which also
+	-- holds the saved configs. The
 	-- header search field is wired up by the workspace as well.
 	local Workspace = FeatureWorkspace( {
 		window = window; context = ctx; components = COMPONENTS;
@@ -4147,100 +4144,6 @@ function UI.create(opts)
 
 		return "None";
 	end
-
-	-- Active features: every toggle that is on, on any page, behind the header's "N on" chip.
-	local Toggles = { };
-
-	for _, Entry in Workspace.entries do
-		if ( Entry.spec.type == "toggle" and Entry.key ) then
-			Toggles[ #Toggles + 1 ] = Entry;
-		end
-	end
-
-	local function ActiveToggles( ): { any }
-		local Active = { };
-
-		for _, Entry in Toggles do
-			if ( config[ Entry.key ] == true ) then
-				Active[ #Active + 1 ] = Entry;
-			end
-		end
-
-		return Active;
-	end
-
-	RefreshActive = function( )
-		if ( controller._destroyed ) then
-			return;
-		end
-
-		window : setActiveCount( #ActiveToggles( ) );
-	end
-
-	local function FillActive( Panel: Instance )
-		for _, Child in Panel : GetChildren( ) do
-			if ( Child : IsA( "GuiObject" ) ) then
-				Child : Destroy( );
-			end
-		end
-
-		local Active = ActiveToggles( );
-
-		if ( #Active == 0 ) then
-			P.label( Panel, "Nothing is on", { Theme = theme, Size = UDim2.new( 1, 0, 0, 28 ), TextColor3 = theme.textDim, TextSize = theme.textSizeSmall + 1 } );
-			return;
-		end
-
-		for Order, Entry in Active do
-			local Row = P.create( "Frame", { Size = UDim2.new( 1, 0, 0, 34 ), BackgroundTransparency = 1, LayoutOrder = Order, Parent = Panel } );
-			P.label( Row, Entry.label, {
-				Theme = theme; Size = UDim2.new( 1, -64, 0, 18 ); Position = UDim2.fromOffset( 2, 0 );
-				Font = theme.fontMedium; TextSize = theme.textSize - 1; TextColor3 = theme.text; TextTruncate = Enum.TextTruncate.AtEnd;
-			} );
-			P.label( Row, Entry.page.label .. " / " .. tostring( Entry.section.title or "General" ), {
-				Theme = theme; Size = UDim2.new( 1, -64, 0, 14 ); Position = UDim2.fromOffset( 2, 18 );
-				TextSize = theme.textSizeSmall - 1; TextColor3 = theme.textFaint; TextTruncate = Enum.TextTruncate.AtEnd;
-			} );
-			local Off = Common.clickable( Row, theme, { maid = maid, getBaseColor = function( ) return theme.control; end } );
-			Off.AnchorPoint = Vector2.new( 1, 0.5 );
-			Off.Position = UDim2.new( 1, 0, 0.5, 0 );
-			Off.Size = UDim2.fromOffset( 52, 24 );
-			Off.Text = "Off";
-			Off.FontFace = theme.fontFaceMedium;
-			Off.TextSize = theme.textSizeSmall;
-			Off.TextColor3 = theme.text;
-			maid : give( Off.Activated : Connect( function( )
-				BuildAllPages( );
-				local Control = ctx.controls[ Entry.key ];
-
-				if ( Control and Control.set ) then
-					Control.set( false );
-				end
-
-				config[ Entry.key ] = false;
-				RefreshActive( );
-				FillActive( Panel );
-			end ) );
-		end
-	end
-
-	window.onActiveClick = function( Anchor: GuiObject )
-		local Panel = window : openPopover( Anchor, 300, 380 );
-		FillActive( Panel );
-	end
-
-	-- Game code flips toggles silently (control.set( v, true )) for presets and exclusive pairs, which
-	-- never reaches dispatch, so the count also re-reads config while the menu is open.
-	task.spawn( function( )
-		while ( not controller._destroyed ) do
-			if ( window : isVisible( ) ) then
-				RefreshActive( );
-			end
-
-			task.wait( 0.5 );
-		end
-	end );
-	RefreshActive( );
 
 	-- Keybind list: every keybind on a feature page, named after its own label or, for generic
 	-- labels like "Toggle Key", the group or section it sits in. A bind is shown as on when the
@@ -4352,9 +4255,12 @@ function UI.create(opts)
 			controller : refreshTheme( );
 		end
 
+		-- Saved configs live on the Settings page, built with the rest of it on first open.
+		local settingsPage = window : addPage( "Settings", "settings", { utility = true } );
+		local BuildSavedConfigs = nil;
+
 		if ( configName ) then
-			local ConfigsPage = window : addPage( "Configs", "package", { utility = true } );
-			ConfigsPage.singleColumn = true;
+			local ConfigsPage = settingsPage;
 
 			local function BuildConfigs( )
 				local Saved = ConfigsPage : addSection( "Saved Configs", { collapsible = false } );
@@ -4513,12 +4419,9 @@ function UI.create(opts)
 				} );
 			end
 
-			local ConfigsIndex = #window.pages;
-			PageBuilders[ ConfigsIndex ] = BuildConfigs;
-			PageOrder[ #PageOrder + 1 ] = ConfigsIndex;
+			BuildSavedConfigs = BuildConfigs;
 		end
 
-		local settingsPage = window : addPage( "Settings", "settings", { utility = true } );
 		local KeybindList = nil;
 
 		local function FillKeybinds( )
@@ -4628,6 +4531,10 @@ function UI.create(opts)
 					controller : refreshTheme( );
 				end;
 			}, hubCtx );
+
+			if ( BuildSavedConfigs ) then
+				BuildSavedConfigs( );
+			end
 
 			KeybindList = settingsPage : addSection( "Keybinds" );
 			FillKeybinds( );
@@ -5799,8 +5706,9 @@ Theme.active = {
 	textSizeSmall = 12;
 	textSizeTitle = 14;
 
-	corner = 3;
-	cornerSmall = 2;
+	-- One radius for every rounded box: window, panels, controls and tabs.
+	corner = 4;
+	cornerSmall = 4;
 	rowHeight = 25;
 	controlHeight = 21;
 	padding = 10;
@@ -5811,7 +5719,8 @@ Theme.active = {
 	headerHeight = 38;
 	tabHeight = 28;
 	windowSize = Vector2.new( 820, 540 );
-	tabWidth = 160;
+	-- Cap on the full sidebar; it shrinks to its longest label (ui/window.lua).
+	tabWidth = 144;
 	columnGap = 10;
 	logoImage = "MicroHub/src/ui/assets/mioicon.png";
 	logoImageAlt = "src/ui/assets/mioicon.png";
@@ -5883,9 +5792,10 @@ end
 return Theme;]];
 		["ui/window.lua"] = [[
 -- Window shell for the hub menu: sidebar of game pages with the hub's own pages (Favorites,
--- Configs, Settings) pinned in a footer, a header with search and the active-features chip, and
--- masonry pages of section cards. It switches between a full sidebar, an icon rail and a bottom
--- tab bar as the window narrows, and always uses the tab bar on touch devices.
+-- Settings) pinned in a footer, a header with search, and masonry pages of section cards. The
+-- active page's section tabs stack under it in the sidebar. It switches between a full sidebar,
+-- an icon rail and a bottom tab bar as the window narrows, and always uses the tab bar on touch
+-- devices; those two have no room for section tabs, so the page shows them in a strip instead.
 --
 -- `addPage`, `showPage`, `refreshTheme`, `setVisible`, `isVisible`, `destroy` and each page's
 -- `addSection` keep their old names and shapes: ui/init.lua and ui/workspace.lua drive them.
@@ -5899,6 +5809,7 @@ local P = require( "ui/primitives.lua" );
 
 -- Services
 local UserInputService = Services.UserInputService;
+local TextService = Services.TextService;
 
 -- Constants
 local RAIL_BREAKPOINT = 720;
@@ -5909,6 +5820,13 @@ local FOOTER_HEIGHT = 40;
 local BRAND_HEIGHT = 48;
 local CHIP_BAR_HEIGHT = 28;
 local CHIP_THRESHOLD = 5;
+-- Full sidebar: tabs sit TAB_INSET in from each edge, labels start TAB_TEXT_LEFT into the tab, and
+-- the sidebar is as wide as its longest label needs, between TAB_MIN_WIDTH and theme.tabWidth.
+local TAB_MIN_WIDTH = 112;
+local TAB_INSET = 6;
+local TAB_TEXT_LEFT = 32;
+local TAB_TEXT_RIGHT = 8;
+local SECTION_TAB_HEIGHT = 22;
 local THREE_COLUMN_WIDTH = 860;
 local TWO_COLUMN_WIDTH = 440;
 local VIEWPORT_MARGIN = Vector2.new( 20, 28 );
@@ -6096,7 +6014,7 @@ function Window.new( Options: any ): any
 	P.corner( Border, Palette.corner );
 	local BorderStroke = P.stroke( Border, Palette.outline or Palette.stroke, 1, 0 );
 
-	-- Black outer line, lighter line one pixel inside it, and the accent strip across the top.
+	-- Black outer line and a lighter line one pixel inside it.
 	local InnerBorder = P.create( "Frame", {
 		Position = UDim2.fromOffset( 1, 1 );
 		Size = UDim2.new( 1, -2, 1, -2 );
@@ -6108,20 +6026,35 @@ function Window.new( Options: any ): any
 	P.corner( InnerBorder, math.max( Palette.corner - 1, 0 ) );
 	local InnerStroke = P.stroke( InnerBorder, Palette.stroke, 1, 0 );
 
-	local AccentLine = P.create( "Frame", {
-		Size = UDim2.new( 1, 0, 0, 2 );
+	-- Keyboard and gamepad navigation draw Roblox's blue selection box outside the selected
+	-- object. Every button and text box here uses this one instead: an accent line inset one
+	-- pixel, so it stays on the control's own edge.
+	local Selection = P.create( "Frame", {
+		Name = "\0";
+		Position = UDim2.fromOffset( 1, 1 );
+		Size = UDim2.new( 1, -2, 1, -2 );
+		BackgroundTransparency = 1;
 		BorderSizePixel = 0;
-		ZIndex = 41;
-		Parent = Root;
 	} );
-	local AccentGradient = P.gradient( AccentLine, Palette.accent, Palette.accentSoft or Palette.accent, 0 );
+	P.corner( Selection, Palette.corner );
+	local SelectionStroke = P.stroke( Selection, Palette.accent, 1, 0 );
+	Self._selection = Selection;
+
+	local function AdoptSelection( Object: Instance )
+		if ( not ( Object : IsA( "GuiButton" ) or Object : IsA( "TextBox" ) ) ) then
+			return;
+		end
+
+		( Object :: GuiObject ).SelectionImageObject = Selection;
+	end
+
+	Self : _give( Screen.DescendantAdded : Connect( AdoptSelection ) );
 
 	Self : _paint( function( Colors )
 		Root.BackgroundColor3 = Colors.panel or Colors.background;
 		BorderStroke.Color = Colors.outline or Colors.stroke;
 		InnerStroke.Color = Colors.stroke;
-		AccentLine.BackgroundColor3 = Color3.new( 1, 1, 1 );
-		AccentGradient.Color = ColorSequence.new( Colors.accent, Colors.accentSoft or Colors.accent );
+		SelectionStroke.Color = Colors.accent;
 	end );
 
 	Self : _buildSidebar( );
@@ -6249,7 +6182,7 @@ function Window : _buildSidebar( )
 		ZIndex = 4;
 		Parent = Brand;
 	} );
-	P.corner( Logo, 3 );
+	P.corner( Logo, Colors.corner );
 	self.logo = Logo;
 
 	local LogoImage = ResolveImage( { Colors.logoImage, Colors.logoImageAlt } );
@@ -6266,7 +6199,7 @@ function Window : _buildSidebar( )
 			ZIndex = 5;
 			Parent = Logo;
 		} );
-		P.corner( Bitmap, 3 );
+		P.corner( Bitmap, Colors.corner );
 	end
 
 	if ( not LogoImage ) then
@@ -6313,9 +6246,21 @@ function Window : _buildSidebar( )
 		ZIndex = 3;
 		Parent = Sidebar;
 	} );
-	P.paddingXY( TabList, 0, 2 );
-	P.listLayout( TabList, 0 );
+	P.paddingXY( TabList, TAB_INSET, 2 );
+	P.listLayout( TabList, 2 );
 	self.tabScroll = TabList;
+
+	-- The active page's section tabs, slotted under its page tab by LayoutOrder.
+	local SectionList = P.create( "Frame", {
+		Size = UDim2.new( 1, 0, 0, 0 );
+		AutomaticSize = Enum.AutomaticSize.Y;
+		BackgroundTransparency = 1;
+		Visible = false;
+		ZIndex = 4;
+		Parent = TabList;
+	} );
+	P.listLayout( SectionList, 1 );
+	self.sectionList = SectionList;
 
 	local Footer = P.create( "Frame", {
 		AnchorPoint = Vector2.new( 0, 1 );
@@ -6383,7 +6328,7 @@ function Window : _buildHeader( )
 	local Cluster = P.create( "Frame", {
 		AnchorPoint = Vector2.new( 1, 0.5 );
 		Position = UDim2.new( 1, -8, 0.5, 0 );
-		Size = UDim2.new( 0, 330, 0, 26 );
+		Size = UDim2.new( 0, 240, 0, 26 );
 		BackgroundTransparency = 1;
 		ZIndex = 5;
 		Parent = Header;
@@ -6433,45 +6378,6 @@ function Window : _buildHeader( )
 		end
 	end ) );
 
-	-- How many features are switched on, across every page. ui/init.lua keeps the count.
-	local Chip = P.create( "TextButton", {
-		Size = UDim2.fromOffset( 0, 22 );
-		AutomaticSize = Enum.AutomaticSize.X;
-		BorderSizePixel = 0;
-		AutoButtonColor = false;
-		Text = "";
-		LayoutOrder = 2;
-		ZIndex = 5;
-		Parent = Cluster;
-	} ) :: TextButton;
-	P.corner( Chip, Colors.cornerSmall );
-	P.paddingXY( Chip, 8, 0 );
-	local ChipStroke = P.stroke( Chip, Colors.stroke, 1, 0 );
-	local ChipLayout = P.listLayout( Chip, 6, Enum.FillDirection.Horizontal );
-	ChipLayout.VerticalAlignment = Enum.VerticalAlignment.Center;
-	local ChipDot = P.create( "Frame", {
-		Size = UDim2.fromOffset( 6, 6 );
-		BorderSizePixel = 0;
-		ZIndex = 6;
-		Parent = Chip;
-	} );
-	local ChipLabel = P.label( Chip, "0 on", {
-		Theme = Colors;
-		AutomaticSize = Enum.AutomaticSize.X;
-		Size = UDim2.fromOffset( 0, 22 );
-		Font = Colors.fontMedium;
-		TextSize = Colors.textSizeSmall;
-		ZIndex = 6;
-		LayoutOrder = 2;
-	} );
-	self.activeChip = Chip;
-	self._activeCount = 0;
-	self : _give( Chip.Activated : Connect( function( )
-		if ( self.onActiveClick ) then
-			self.onActiveClick( Chip );
-		end
-	end ) );
-
 	local Minimize = self : _iconButton( Cluster, "chevron-down", 24 );
 	Minimize.LayoutOrder = 3;
 	self : _give( Minimize.Activated : Connect( function( )
@@ -6510,31 +6416,7 @@ function Window : _buildHeader( )
 		SearchBox.TextColor3 = Palette.text;
 		SearchBox.PlaceholderColor3 = Palette.textFaint;
 		HeaderLine.BackgroundColor3 = Palette.stroke;
-		self : _paintChip( );
 	end );
-
-	self._chipParts = { Chip = Chip, Stroke = ChipStroke, Dot = ChipDot, Label = ChipLabel };
-end
-
-function Window : _paintChip( )
-	local Parts = self._chipParts;
-
-	if ( not Parts ) then
-		return;
-	end
-
-	local Colors = self.theme;
-	local Active = self._activeCount > 0;
-	Parts.Chip.BackgroundColor3 = Colors.control;
-	Parts.Stroke.Color = Active and Colors.accentDim or Colors.stroke;
-	Parts.Dot.BackgroundColor3 = Active and Colors.accent or Colors.textFaint;
-	Parts.Label.TextColor3 = Active and Colors.accentBright or Colors.textDim;
-	Parts.Label.Text = tostring( self._activeCount ) .. " on";
-end
-
-function Window : setActiveCount( Count: number )
-	self._activeCount = Count;
-	self : _paintChip( );
 end
 
 function Window : _buildBottomBar( )
@@ -6719,67 +6601,6 @@ function Window : pixelScale( ): number
 	return self.root.AbsoluteSize.X / Width;
 end
 
--- A floating panel under an anchor (the active chip, the search field). Clicking outside closes it.
-function Window : openPopover( Anchor: GuiObject, Width: number, MaxHeight: number ): ( Frame, ( ) -> ( ) )
-	self : closePopover( );
-	local Colors = self.theme;
-	local Scale = self : pixelScale( );
-	local Catcher = P.create( "TextButton", {
-		Size = UDim2.fromScale( 1, 1 );
-		BackgroundTransparency = 1;
-		Text = "";
-		AutoButtonColor = false;
-		ZIndex = 60;
-		Parent = self.root;
-	} );
-	local Right = ( self.root.AbsolutePosition.X + self.root.AbsoluteSize.X - ( Anchor.AbsolutePosition.X + Anchor.AbsoluteSize.X ) ) / Scale;
-	local Top = ( Anchor.AbsolutePosition.Y + Anchor.AbsoluteSize.Y - self.root.AbsolutePosition.Y ) / Scale + 6;
-	local Panel = P.create( "ScrollingFrame", {
-		AnchorPoint = Vector2.new( 1, 0 );
-		Position = UDim2.new( 1, -Right, 0, Top );
-		Size = UDim2.fromOffset( Width, 0 );
-		AutomaticSize = Enum.AutomaticSize.None;
-		BackgroundColor3 = Colors.elevated;
-		BorderSizePixel = 0;
-		ScrollBarThickness = 3;
-		ScrollBarImageColor3 = Colors.textFaint;
-		CanvasSize = UDim2.new( );
-		AutomaticCanvasSize = Enum.AutomaticSize.Y;
-		ZIndex = 61;
-		Parent = self.root;
-	} ) :: ScrollingFrame;
-	P.corner( Panel, Colors.cornerSmall );
-	P.stroke( Panel, Colors.strokeBright, 1, 0 );
-	P.padding( Panel, 8 );
-	local Layout = P.listLayout( Panel, Colors.controlGap or 4 );
-	local Limit = math.min( MaxHeight, self.root.AbsoluteSize.Y / Scale - Top - 12 );
-	local function Fit( )
-		Panel.Size = UDim2.fromOffset( Width, math.min( Limit, Layout.AbsoluteContentSize.Y / Scale + 20 ) );
-	end
-	local FitConnection = Layout : GetPropertyChangedSignal( "AbsoluteContentSize" ) : Connect( Fit );
-	Fit( );
-
-	local function Close( )
-		FitConnection : Disconnect( );
-		Catcher : Destroy( );
-		Panel : Destroy( );
-
-		if ( self._popover and self._popover.Panel == Panel ) then
-			self._popover = nil;
-		end
-	end
-
-	self._popover = { Panel = Panel, Close = Close };
-	self : _give( Catcher.Activated : Connect( Close ) );
-	return Panel, Close;
-end
-
-function Window : closePopover( )
-	if ( self._popover ) then
-		self._popover.Close( );
-	end
-end
-
 function Window : _viewportSize( ): Vector2
 	local Camera = Services.Workspace.CurrentCamera;
 	return Camera and Camera.ViewportSize or Vector2.new( 800, 600 );
@@ -6807,7 +6628,56 @@ function Window : _sidebarWidth( ): number
 		return 0;
 	end
 
-	return self.theme.tabWidth or 196;
+	return self._fitWidth or self.theme.tabWidth or 144;
+end
+
+-- Width of a label in a medium-weight Gotham, which runs wider than the menu font, so a width
+-- sized from it always fits.
+function Window : _measure( Text: string, Size: number ): number
+	local Ok, Bounds = pcall( TextService.GetTextSize, TextService, Text, Size, self.theme.fontMedium or Enum.Font.GothamMedium, Vector2.new( 2000, 200 ) );
+
+	if ( not Ok or typeof( Bounds ) ~= "Vector2" ) then
+		return #Text * Size * 0.62;
+	end
+
+	return Bounds.X;
+end
+
+function Window : _showsSectionTabs( Page: any ): boolean
+	return #Page.sections >= CHIP_THRESHOLD and not Page.utility;
+end
+
+-- The full sidebar is as wide as its longest page or section label needs; theme.tabWidth caps it,
+-- and a label past the cap wraps onto a second line.
+function Window : _fitSidebar( )
+	local Widest = 0;
+
+	for _, Entry in self.tabButtons do
+		local Page = Entry.page;
+
+		if ( not Page.utility ) then
+			Widest = math.max( Widest, self : _measure( Page.label, self.theme.textSize - 1 ) );
+		end
+
+		if ( self : _showsSectionTabs( Page ) ) then
+			for _, Section in Page.sections do
+				Widest = math.max( Widest, self : _measure( SectionCaption( Section.caption or "Section" ), self.theme.textSizeSmall ) );
+			end
+		end
+	end
+
+	local Needed = math.ceil( Widest + TAB_INSET * 2 + TAB_TEXT_LEFT + TAB_TEXT_RIGHT );
+	local Width = math.min( math.max( Needed, TAB_MIN_WIDTH ), self.theme.tabWidth or 144 );
+
+	if ( Width == self._fitWidth ) then
+		return;
+	end
+
+	self._fitWidth = Width;
+
+	if ( self._mode == "full" ) then
+		self : _setMode( "full" );
+	end
 end
 
 function Window : _layoutTab( Entry: any )
@@ -6815,9 +6685,16 @@ function Window : _layoutTab( Entry: any )
 	local Button = Entry.button;
 	local Utility = Entry.page.utility;
 
+	Button.AutomaticSize = Enum.AutomaticSize.None;
+	Entry.label.AutomaticSize = Enum.AutomaticSize.None;
+	Entry.label.TextWrapped = false;
+	Entry.label.TextTruncate = Enum.TextTruncate.None;
+	Entry.label.TextYAlignment = Enum.TextYAlignment.Center;
+
 	if ( Mode == "bar" ) then
+		-- Each tab is as wide as its label needs, never narrower than a thumb.
 		Button.Parent = self.bottomBar;
-		Button.Size = UDim2.fromOffset( 74, BAR_HEIGHT - 8 );
+		Button.Size = UDim2.fromOffset( math.max( 74, math.ceil( self : _measure( Entry.page.label, 11 ) ) + 12 ), BAR_HEIGHT - 8 );
 		Button.LayoutOrder = Entry.order + ( Utility and 1000 or 0 );
 		Entry.icon.AnchorPoint = Vector2.new( 0.5, 0 );
 		Entry.icon.Position = UDim2.new( 0.5, 0, 0, 6 );
@@ -6841,30 +6718,39 @@ function Window : _layoutTab( Entry: any )
 		return;
 	end
 
+	-- Page tabs take even LayoutOrders so the section list can sit right under the active one.
 	Button.Parent = self.tabScroll;
-	Button.LayoutOrder = Entry.order;
+	Button.LayoutOrder = Entry.order * 2;
 
 	if ( Mode == "rail" ) then
-		Button.Size = UDim2.new( 1, 0, 0, 50 );
+		-- Two lines under the icon, so a two-word label wraps instead of being cut.
+		Button.Size = UDim2.new( 1, 0, 0, 52 );
 		Entry.icon.AnchorPoint = Vector2.new( 0.5, 0 );
-		Entry.icon.Position = UDim2.new( 0.5, 0, 0, 8 );
+		Entry.icon.Position = UDim2.new( 0.5, 0, 0, 7 );
 		Entry.label.Visible = true;
 		Entry.label.TextXAlignment = Enum.TextXAlignment.Center;
+		Entry.label.TextYAlignment = Enum.TextYAlignment.Top;
+		Entry.label.TextWrapped = true;
 		Entry.label.TextSize = 10;
-		Entry.label.Position = UDim2.new( 0, 1, 0, 29 );
-		Entry.label.Size = UDim2.new( 1, -2, 0, 14 );
+		Entry.label.Position = UDim2.new( 0, 1, 0, 25 );
+		Entry.label.Size = UDim2.new( 1, -2, 0, 25 );
 		Entry.bar.Visible = false;
 		return;
 	end
 
-	Button.Size = UDim2.new( 1, 0, 0, self.theme.tabHeight or 34 );
+	-- A label wider than the capped sidebar wraps and the tab grows to fit it.
+	local Height = self.theme.tabHeight or 34;
+	Button.Size = UDim2.new( 1, 0, 0, Height );
+	Button.AutomaticSize = Enum.AutomaticSize.Y;
 	Entry.icon.AnchorPoint = Vector2.new( 0, 0.5 );
-	Entry.icon.Position = UDim2.new( 0, 14, 0.5, 0 );
+	Entry.icon.Position = UDim2.new( 0, 10, 0.5, 0 );
 	Entry.label.Visible = true;
 	Entry.label.TextXAlignment = Enum.TextXAlignment.Left;
+	Entry.label.TextWrapped = true;
 	Entry.label.TextSize = self.theme.textSize - 1;
-	Entry.label.Position = UDim2.fromOffset( 38, 0 );
-	Entry.label.Size = UDim2.new( 1, -44, 1, 0 );
+	Entry.label.Position = UDim2.fromOffset( TAB_TEXT_LEFT, 0 );
+	Entry.label.Size = UDim2.new( 1, -( TAB_TEXT_LEFT + TAB_TEXT_RIGHT ), 0, Height );
+	Entry.label.AutomaticSize = Enum.AutomaticSize.Y;
 	Entry.bar.Visible = true;
 end
 
@@ -6884,8 +6770,8 @@ function Window : _setMode( Mode: string )
 	self.tabScroll.Size = UDim2.new( 1, 0, 1, -( BRAND_HEIGHT + self.footer.Size.Y.Offset ) );
 	self.tabScroll.Position = UDim2.fromOffset( 0, BRAND_HEIGHT );
 	local TabPadding = self.tabScroll : FindFirstChildOfClass( "UIPadding" );
-	TabPadding.PaddingLeft = UDim.new( 0, Mode == "rail" and 6 or 0 );
-	TabPadding.PaddingRight = UDim.new( 0, Mode == "rail" and 6 or 0 );
+	TabPadding.PaddingLeft = UDim.new( 0, TAB_INSET );
+	TabPadding.PaddingRight = UDim.new( 0, TAB_INSET );
 
 	self.header.Position = UDim2.fromOffset( Sidebar, 0 );
 	self.header.Size = UDim2.new( 1, -Sidebar, 0, Header );
@@ -6904,6 +6790,11 @@ function Window : _setMode( Mode: string )
 	end
 
 	self : _refreshColumns( );
+
+	-- Section tabs move between the sidebar and the page strip with the mode.
+	if ( self.activePage ) then
+		self : _buildChips( self.pages[ self.activePage ] );
+	end
 end
 
 function Window : _refreshColumns( )
@@ -6975,8 +6866,11 @@ function Window : _queueReflow( Page: any )
 	end );
 end
 
+-- Section tabs: stacked under the active page tab in the full sidebar, or a strip above the page
+-- in the rail and tab-bar modes, which have no room for them in the sidebar.
 function Window : _buildChips( Page: any )
 	local Bar = Page.chipBar;
+	local Active = self.activePage ~= nil and self.pages[ self.activePage ] == Page;
 
 	for _, Child in Bar : GetChildren( ) do
 		if ( Child : IsA( "GuiButton" ) ) then
@@ -6984,12 +6878,22 @@ function Window : _buildChips( Page: any )
 		end
 	end
 
-	local Show = #Page.sections >= CHIP_THRESHOLD and not Page.utility;
-	Bar.Visible = Show;
-	Page.scroll.Position = UDim2.fromOffset( 0, Show and CHIP_BAR_HEIGHT + 4 or 0 );
-	Page.scroll.Size = UDim2.new( 1, 0, 1, Show and -( CHIP_BAR_HEIGHT + 4 ) or 0 );
+	local Show = self : _showsSectionTabs( Page );
+	local InSidebar = Show and self._mode == "full";
+	local InStrip = Show and not InSidebar;
+	Bar.Visible = InStrip;
+	Page.scroll.Position = UDim2.fromOffset( 0, InStrip and CHIP_BAR_HEIGHT + 4 or 0 );
+	Page.scroll.Size = UDim2.new( 1, 0, 1, InStrip and -( CHIP_BAR_HEIGHT + 4 ) or 0 );
 
-	if ( not Show ) then
+	if ( Active ) then
+		self : _buildSectionTabs( Page, InSidebar );
+	end
+
+	if ( Show ) then
+		self : _fitSidebar( );
+	end
+
+	if ( not InStrip ) then
 		return;
 	end
 
@@ -7018,6 +6922,56 @@ function Window : _buildChips( Page: any )
 			Stroke.Color = State and self.theme.strokeBright or self.theme.stroke;
 		end );
 		self : _give( Chip.Activated : Connect( function( )
+			self : revealSection( Page, Section );
+		end ) );
+	end
+end
+
+function Window : _buildSectionTabs( Page: any, Show: boolean )
+	local List = self.sectionList;
+
+	for _, Child in List : GetChildren( ) do
+		if ( Child : IsA( "GuiButton" ) ) then
+			Child : Destroy( );
+		end
+	end
+
+	List.Visible = Show;
+
+	if ( not Show ) then
+		return;
+	end
+
+	local Colors = self.theme;
+	List.LayoutOrder = self.activePage * 2 + 1;
+
+	for Order, Section in Page.sections do
+		local Tab = P.create( "TextButton", {
+			Size = UDim2.new( 1, 0, 0, SECTION_TAB_HEIGHT );
+			AutomaticSize = Enum.AutomaticSize.Y;
+			BackgroundColor3 = Colors.overlay;
+			BackgroundTransparency = 1;
+			BorderSizePixel = 0;
+			AutoButtonColor = false;
+			Text = SectionCaption( Section.caption or "Section" );
+			FontFace = Colors.fontFace;
+			TextSize = Colors.textSizeSmall;
+			TextColor3 = Colors.textDim;
+			TextXAlignment = Enum.TextXAlignment.Left;
+			TextWrapped = true;
+			LayoutOrder = Order;
+			ZIndex = 5;
+			Parent = List;
+		} ) :: TextButton;
+		P.corner( Tab, Colors.corner );
+		local Padding = P.paddingXY( Tab, 0, 4 );
+		Padding.PaddingLeft = UDim.new( 0, TAB_TEXT_LEFT );
+		Padding.PaddingRight = UDim.new( 0, TAB_TEXT_RIGHT );
+		self : _hover( Tab, function( State: boolean )
+			Tab.TextColor3 = State and self.theme.text or self.theme.textDim;
+			Tab.BackgroundTransparency = State and 0.6 or 1;
+		end );
+		self : _give( Tab.Activated : Connect( function( )
 			self : revealSection( Page, Section );
 		end ) );
 	end
@@ -7223,8 +7177,12 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 		Text = "";
 		ZIndex = 4;
 	} ) :: TextButton;
+	P.corner( Button, Colors.corner );
+	-- Inset top and bottom so the accent bar clears the tab's rounded corners.
 	local Bar = P.create( "Frame", {
-		Size = UDim2.new( 0, 2, 1, 0 );
+		AnchorPoint = Vector2.new( 0, 0.5 );
+		Position = UDim2.fromScale( 0, 0.5 );
+		Size = UDim2.new( 0, 2, 1, -12 );
 		BorderSizePixel = 0;
 		ZIndex = 5;
 		Parent = Button;
@@ -7315,17 +7273,9 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 			LayoutOrder = self._sectionCount;
 			Parent = self.columns[ 1 ];
 		} );
-		P.corner( Card, Palette.cornerSmall );
+		P.corner( Card, Palette.corner );
 		local CardStroke = P.stroke( Card, Palette.stroke, 1, 0 );
 		P.listLayout( Card, 0 );
-
-		-- Group boxes carry the accent across their top edge, the way classic script menus do.
-		local CardAccent = P.create( "Frame", {
-			Size = UDim2.new( 1, 0, 0, 1 );
-			BorderSizePixel = 0;
-			LayoutOrder = -1;
-			Parent = Card;
-		} );
 
 		local Entry = { caption = Title, card = Card };
 		local HeaderRow = nil;
@@ -7369,7 +7319,6 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 		Owner : _paint( function( Colors )
 			Card.BackgroundColor3 = Colors.surface;
 			CardStroke.Color = Colors.stroke;
-			CardAccent.BackgroundColor3 = Colors.accent;
 
 			if ( Caption ) then
 				Caption.TextColor3 = Colors.text;
@@ -7433,6 +7382,7 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 	self.pages[ Index ] = Page;
 	self.tabButtons[ Index ] = Entry;
 	self : _layoutTab( Entry );
+	self : _fitSidebar( );
 
 	self : _paint( function( Palette )
 		local Active = self.activePage == Index;
@@ -7474,7 +7424,6 @@ function Window : showPage( Index: number )
 		BeforeShow( Index );
 	end
 
-	self : closePopover( );
 	self.activePage = Index;
 
 	for Other, Entry in self.tabButtons do
@@ -7518,7 +7467,6 @@ function Window : setVisible( Visible: boolean )
 
 	self._dragInput = nil;
 	self._resizeInput = nil;
-	self : closePopover( );
 end
 
 function Window : isVisible( ): boolean
@@ -7553,6 +7501,11 @@ function Window : destroy( )
 	if ( self.screen ) then
 		self.screen : Destroy( );
 		self.screen = nil;
+	end
+
+	if ( self._selection ) then
+		self._selection : Destroy( );
+		self._selection = nil;
 	end
 
 	self.root = nil;
@@ -7840,7 +7793,6 @@ return function( Options: any ): any
 			return;
 		end
 
-		Window : closePopover( );
 		Panel.Visible = true;
 		Catcher.Visible = true;
 		Refresh( );

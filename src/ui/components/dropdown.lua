@@ -64,7 +64,7 @@ return function(section: Instance, spec, ctx)
 		TextSize = theme.textSizeSmall,
 		TextTruncate = Enum.TextTruncate.AtEnd,
 	})
-	local chevron = Icons.mount(header, "chevron-down", {
+	local chevron = Icons.mount(header, "tabler:chevron-down", {
 		size = 13,
 		color = theme.textFaint,
 		anchorPoint = Vector2.new(1, 0.5),
@@ -403,13 +403,13 @@ return function(section: Instance, spec, ctx)
 					BackgroundTransparency = 1,
 					Parent = inner,
 				})
-				boxIcon = Icons.mount(tickSlot, "square", {
+				boxIcon = Icons.mount(tickSlot, "tabler:square", {
 					size = 12,
 					color = theme.textFaint,
 					anchorPoint = Vector2.new(0.5, 0.5),
 					position = UDim2.fromScale(0.5, 0.5),
 				})
-				checkIcon = Icons.mount(tickSlot, "check-square-2", {
+				checkIcon = Icons.mount(tickSlot, "tabler:square-check", {
 					size = 12,
 					color = theme.accentBright,
 					anchorPoint = Vector2.new(0.5, 0.5),

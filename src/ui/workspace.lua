@@ -28,7 +28,7 @@ return function( Options: any ): any
 	local Saved = Preferences.Favorites[ Scope ];
 
 	-- Favorites page.
-	local FavoritesPage = Window : addPage( "Favorites", "sparkles", { utility = true } );
+	local FavoritesPage = Window : addPage( "Favorites", "heroicons:sparkles", { utility = true } );
 	FavoritesPage.singleColumn = true;
 	local FavoritesIndex = #Window.pages;
 	local FavoritesBody = FavoritesPage : addSection( "Favorites", { collapsible = false } );

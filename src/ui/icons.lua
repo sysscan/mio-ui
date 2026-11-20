@@ -218,6 +218,11 @@ function Icons.getAsset(name: string, sheetSize: number?)
 		return molto
 	end
 	local Normalized = string.lower( name );
+	-- A "tabler:" or "heroicons:" name missing from the generated subset falls back to its bare name.
+	local Bare = string.match( Normalized, "^%a+:(.+)$" );
+	if ( Bare ) then
+		return Icons.getAsset( Bare, sheetSize );
+	end
 	local Key = Aliases[ Normalized ] or name;
 	local Entry = Assets[ Key ];
 	if ( not Entry ) then

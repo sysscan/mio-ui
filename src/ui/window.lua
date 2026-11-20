@@ -555,7 +555,7 @@ function Window : _buildHeader( )
 	} );
 	P.corner( SearchFrame, Colors.cornerSmall );
 	local SearchStroke = P.stroke( SearchFrame, Colors.stroke, 1, 0 );
-	local SearchIcon = Icons.mount( SearchFrame, "search", {
+	local SearchIcon = Icons.mount( SearchFrame, "tabler:search", {
 		size = 12;
 		anchorPoint = Vector2.new( 0, 0.5 );
 		position = UDim2.new( 0, 7, 0.5, 0 );
@@ -585,7 +585,7 @@ function Window : _buildHeader( )
 		end
 	end ) );
 
-	local Minimize = self : _iconButton( Cluster, "chevron-down", 24 );
+	local Minimize = self : _iconButton( Cluster, "tabler:chevron-down", 24 );
 	Minimize.LayoutOrder = 3;
 	self : _give( Minimize.Activated : Connect( function( )
 		self : setVisible( false );
@@ -595,7 +595,7 @@ function Window : _buildHeader( )
 		end
 	end ) );
 
-	local Close, CloseIcon = self : _iconButton( Cluster, "x", 24 );
+	local Close, CloseIcon = self : _iconButton( Cluster, "tabler:x", 24 );
 	Close.LayoutOrder = 4;
 	self : _hover( Close, function( State: boolean )
 		Close.BackgroundColor3 = State and self.theme.negative or self.theme.overlay;
@@ -1535,7 +1535,7 @@ function Window : addPage( Label: string, IconName: string?, PageOptions: any? )
 		end );
 
 		if ( HeaderRow and ( not SectionOptions or SectionOptions.collapsible ~= false ) ) then
-			Chevron = Icons.mount( HeaderRow, "chevron-down", {
+			Chevron = Icons.mount( HeaderRow, "tabler:chevron-down", {
 				size = 11;
 				color = Palette.textFaint;
 				anchorPoint = Vector2.new( 1, 0.5 );

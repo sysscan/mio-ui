@@ -43,7 +43,7 @@ return function(section: Instance, spec, ctx)
 	local expandLayout = P.listLayout(expandInner, 8, Enum.FillDirection.Horizontal)
 	expandLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
-	local chevron = Icons.mount(expandInner, "chevron-right", {
+	local chevron = Icons.mount(expandInner, "tabler:chevron-right", {
 		size = 12,
 		color = theme.textFaint,
 	})

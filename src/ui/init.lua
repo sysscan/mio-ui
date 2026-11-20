@@ -14,6 +14,7 @@ local Occlusion = require("visuals/occlusion.lua")
 local EspControls = require( "visuals/esp/controls.lua" );
 local FeatureWorkspace = require( "ui/workspace.lua" );
 local Appearance = require( "ui/appearance.lua" );
+local Organize = require( "ui/organize.lua" );
 
 local UserInputService = Services.UserInputService
 local HttpService = Services.HttpService
@@ -135,7 +136,7 @@ local function applyImportedConfig(configTable, configName: string?, json: strin
 end
 
 local UI = {}
-UI.version = "7.3.0"
+UI.version = "7.4.0"
 UI.colorPresets = Theme.colorPresets
 UI.icons = Icons
 UI.notify = Notify.push
@@ -327,6 +328,7 @@ local function normalizeSection(section, uiOpts)
 		items = items,
 		compact = section.compact,
 		collapsible = section.collapsible,
+		order = section.order,
 	}
 end
 
@@ -346,6 +348,7 @@ local function buildPages(opts)
 					label = page.label or page.title or "Page",
 					icon = page.icon,
 					sections = sections,
+					order = page.order,
 				})
 			end
 		end
@@ -682,11 +685,22 @@ function UI.create(opts)
 		end
 	end
 
-	for Index, Page in buildPages( opts ) do
+	-- Pages and their sections are put in category order (ui/organize.lua) unless the game opts out.
+	local Organized = opts.organize ~= false;
+	local SpecPages = buildPages( opts );
+
+	if ( Organized ) then
+		Organize.Pages( SpecPages );
+	end
+
+	for Index, Page in SpecPages do
 		Page = table.clone( Page );
 		Page.sections = table.clone( Page.sections or { } );
 		for _, Section in EspControls.sections( opts.configName, Page ) do
 			Page.sections[ #Page.sections + 1 ] = Section;
+		end
+		if ( Organized ) then
+			Organize.Sections( Page.sections );
 		end
 		local PageObject = window : addPage( Page.label or "Page", Page.icon );
 		Page.object = PageObject;
@@ -1003,7 +1017,7 @@ function UI.create(opts)
 		end
 
 		-- Saved configs live on the Settings page, built with the rest of it on first open.
-		local settingsPage = window : addPage( "Settings", "settings", { utility = true } );
+		local settingsPage = window : addPage( "Settings", "heroicons:cog-6-tooth", { utility = true } );
 		local BuildSavedConfigs = nil;
 
 		if ( configName ) then
